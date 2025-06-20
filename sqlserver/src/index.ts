@@ -26,11 +26,11 @@ class SQLServerMCPServer {
       }
     );
 
-    // Obtener connection string del parámetro
+    // Get connection string from parameter
     this.connectionString = process.argv[2];
     if (!this.connectionString) {
-      console.error("Error: Debes proporcionar una connection string como parámetro");
-      console.error("Uso: node dist/index.js \"Server=localhost;Database=mydb;User Id=user;Password=pass;\"");
+      console.error("Error: You must provide a connection string as parameter");
+      console.error("Usage: node dist/index.js \"Server=localhost;Database=mydb;User Id=user;Password=pass;\"");
       process.exit(1);
     }
 
@@ -45,9 +45,9 @@ class SQLServerMCPServer {
     try {
       this.pool = new sql.ConnectionPool(this.connectionString);
       await this.pool.connect();
-      console.error("Conectado a SQL Server");
+      console.error("Connected to SQL Server");
     } catch (error) {
-      console.error("Error conectando a la base de datos:", error);
+      console.error("Error connecting to database:", error);
       throw error;
     }
   }
@@ -58,13 +58,13 @@ class SQLServerMCPServer {
         tools: [
           {
             name: "execute_query",
-            description: "Ejecuta una consulta SQL de solo lectura (SELECT) en la base de datos SQL Server",
+            description: "Executes a read-only SQL query (SELECT) on the SQL Server database",
             inputSchema: {
               type: "object",
               properties: {
                 query: {
                   type: "string",
-                  description: "La consulta SQL SELECT a ejecutar",
+                  description: "The SQL SELECT query to execute",
                 },
               },
               required: ["query"],
@@ -72,7 +72,7 @@ class SQLServerMCPServer {
           },
           {
             name: "list_tables",
-            description: "Lista todas las tablas disponibles en la base de datos",
+            description: "Lists all available tables in the database",
             inputSchema: {
               type: "object",
               properties: {},
@@ -80,13 +80,13 @@ class SQLServerMCPServer {
           },
           {
             name: "describe_table",
-            description: "Describe la estructura de una tabla específica",
+            description: "Describes the structure of a specific table",
             inputSchema: {
               type: "object",
               properties: {
                 table_name: {
                   type: "string",
-                  description: "El nombre de la tabla a describir",
+                  description: "The name of the table to describe",
                 },
               },
               required: ["table_name"],
@@ -105,18 +105,18 @@ class SQLServerMCPServer {
         switch (name) {
           case "execute_query":
             if (!args || typeof args !== 'object' || !('query' in args) || typeof args.query !== 'string') {
-              throw new Error("Se requiere el parámetro 'query' de tipo string");
+              throw new Error("Parameter 'query' of type string is required");
             }
             return await this.executeValidatedQuery(args.query);
           case "list_tables":
             return await this.listTables();
           case "describe_table":
             if (!args || typeof args !== 'object' || !('table_name' in args) || typeof args.table_name !== 'string') {
-              throw new Error("Se requiere el parámetro 'table_name' de tipo string");
+              throw new Error("Parameter 'table_name' of type string is required");
             }
             return await this.describeTable(args.table_name);
           default:
-            throw new Error(`Tool desconocido: ${name}`);
+            throw new Error(`Unknown tool: ${name}`);
         }
       } catch (error) {
         return {
@@ -133,28 +133,28 @@ class SQLServerMCPServer {
 
   private async executeQuery(query: string) {
     if (!this.pool) {
-      throw new Error("No hay conexión a la base de datos");
+      throw new Error("No database connection available");
     }
 
-    // Validación estricta de seguridad
+    // Strict security validation
     this.validateReadOnlyQuery(query);
   }
 
   private validateReadOnlyQuery(query: string) {
     const normalizedQuery = query.trim().toLowerCase();
     
-    // 1. Debe empezar con SELECT
+    // 1. Must start with SELECT
     if (!normalizedQuery.startsWith('select')) {
-      throw new Error("Solo se permiten consultas SELECT para lectura");
+      throw new Error("Only SELECT queries are allowed for read operations");
     }
 
-    // 2. Detectar múltiples statements (separados por ;)
+    // 2. Detect multiple statements (separated by ;)
     const statements = query.split(';').map(s => s.trim()).filter(s => s.length > 0);
     if (statements.length > 1) {
-      throw new Error("No se permiten múltiples statements SQL en una sola consulta");
+      throw new Error("Multiple SQL statements are not allowed in a single query");
     }
 
-    // 3. Lista de palabras clave prohibidas (operaciones de escritura)
+    // 3. List of forbidden keywords (write operations)
     const forbiddenKeywords = [
       'insert', 'update', 'delete', 'drop', 'create', 'alter', 'truncate',
       'exec', 'execute', 'sp_', 'xp_', 'merge', 'bulk', 'openrowset',
@@ -165,21 +165,21 @@ class SQLServerMCPServer {
 
     for (const keyword of forbiddenKeywords) {
       if (normalizedQuery.includes(keyword)) {
-        throw new Error(`Operación prohibida detectada: '${keyword}'. Solo se permiten consultas SELECT de lectura.`);
+        throw new Error(`Forbidden operation detected: '${keyword}'. Only SELECT read queries are allowed.`);
       }
     }
 
-    // 4. Detectar comentarios que podrían ocultar código malicioso
+    // 4. Detect comments that could hide malicious code
     if (normalizedQuery.includes('/*') || normalizedQuery.includes('--')) {
-      throw new Error("No se permiten comentarios en las consultas por seguridad");
+      throw new Error("Comments are not allowed in queries for security reasons");
     }
 
-    // 5. Validar que no contenga CTEs con operaciones peligrosas
+    // 5. Validate that it doesn't contain CTEs with dangerous operations
     if (normalizedQuery.includes('with ') && !this.isValidCTE(normalizedQuery)) {
-      throw new Error("CTE (Common Table Expression) contiene operaciones no permitidas");
+      throw new Error("CTE (Common Table Expression) contains forbidden operations");
     }
 
-    // 6. Detectar funciones del sistema potencialmente peligrosas
+    // 6. Detect potentially dangerous system functions
     const dangerousFunctions = [
       'xp_cmdshell', 'sp_configure', 'openrowset', 'opendatasource',
       'fn_get_audit_file', 'bulk', 'sp_executesql'
@@ -187,13 +187,13 @@ class SQLServerMCPServer {
 
     for (const func of dangerousFunctions) {
       if (normalizedQuery.includes(func)) {
-        throw new Error(`Función del sistema prohibida: '${func}'`);
+        throw new Error(`Forbidden system function: '${func}'`);
       }
     }
   }
 
   private isValidCTE(query: string): boolean {
-    // Validar que el CTE solo contenga SELECT statements
+    // Validate that CTE only contains SELECT statements
     const ctePattern = /with\s+.*?\s+as\s*\((.*?)\)/gi;
     const matches = ctePattern.exec(query);
     
@@ -208,7 +208,7 @@ class SQLServerMCPServer {
 
   private async executeValidatedQuery(query: string) {
     if (!this.pool) {
-      throw new Error("No hay conexión a la base de datos");
+      throw new Error("No database connection available");
     }
 
     try {
@@ -219,18 +219,18 @@ class SQLServerMCPServer {
         content: [
           {
             type: "text",
-            text: `Consulta ejecutada exitosamente. Filas encontradas: ${result.recordset.length}\n\nResultados:\n${JSON.stringify(result.recordset, null, 2)}`,
+            text: `Query executed successfully. Rows found: ${result.recordset.length}\n\nResults:\n${JSON.stringify(result.recordset, null, 2)}`,
           },
         ],
       };
     } catch (error) {
-      throw new Error(`Error ejecutando la consulta: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Error executing query: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   private async listTables() {
     if (!this.pool) {
-      throw new Error("No hay conexión a la base de datos");
+      throw new Error("No database connection available");
     }
 
     try {
@@ -249,18 +249,18 @@ class SQLServerMCPServer {
         content: [
           {
             type: "text",
-            text: `Tablas disponibles:\n${JSON.stringify(result.recordset, null, 2)}`,
+            text: `Available tables:\n${JSON.stringify(result.recordset, null, 2)}`,
           },
         ],
       };
     } catch (error) {
-      throw new Error(`Error listando tablas: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Error listing tables: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   private async describeTable(tableName: string) {
     if (!this.pool) {
-      throw new Error("No hay conexión a la base de datos");
+      throw new Error("No database connection available");
     }
 
     try {
@@ -285,19 +285,19 @@ class SQLServerMCPServer {
         content: [
           {
             type: "text",
-            text: `Estructura de la tabla '${tableName}':\n${JSON.stringify(result.recordset, null, 2)}`,
+            text: `Table structure for '${tableName}':\n${JSON.stringify(result.recordset, null, 2)}`,
           },
         ],
       };
     } catch (error) {
-      throw new Error(`Error describiendo tabla: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Error describing table: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async run(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error("Servidor MCP SQL Server iniciado");
+    console.error("MCP SQL Server started");
   }
 }
 
