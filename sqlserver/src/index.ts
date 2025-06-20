@@ -43,7 +43,10 @@ class SQLServerMCPServer {
     }
 
     try {
-      this.pool = new sql.ConnectionPool(this.connectionString);
+      this.pool = new sql.ConnectionPool({
+        ...sql.ConnectionPool.parseConnectionString(this.connectionString),
+        requestTimeout: 600000,
+      });
       await this.pool.connect();
       console.error("Connected to SQL Server");
     } catch (error) {
