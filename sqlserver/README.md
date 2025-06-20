@@ -39,12 +39,6 @@ npm install
 npm run build
 ```
 
-## Usage
-
-```bash
-node dist/index.js "Server=localhost;Database=mydb;User Id=user;Password=pass;Encrypt=true;TrustServerCertificate=true;"
-```
-
 ## Available Tools
 
 1. **execute_query**: Executes SELECT queries
