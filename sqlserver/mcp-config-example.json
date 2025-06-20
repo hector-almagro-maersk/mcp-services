@@ -3,7 +3,7 @@
     "sqlserver": {
       "command": "node",
       "args": [
-        "/ruta/absoluta/a/mcp-services/sqlserver/dist/index.js",
+        "/absolute/path/to/mcp-services/sqlserver/dist/index.js",
         "Server=localhost,1433;Database=mydb;User Id=sa;Password=YourPassword123;Encrypt=true;TrustServerCertificate=true;"
       ]
     }
