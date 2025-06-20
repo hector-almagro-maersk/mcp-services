@@ -1,37 +1,37 @@
 # MCP SQL Server Server
 
-Un servidor MCP (Model Context Protocol) simple para realizar consultas de solo lectura en bases de datos SQL Server.
+A simple MCP (Model Context Protocol) server for performing read-only queries on SQL Server databases.
 
-## Características
+## Features
 
-- ✅ **Solo lectura**: Únicamente permite consultas `SELECT`
-- ✅ **Validación estricta**: Múltiples capas de seguridad
-- ✅ **Connection string por parámetro**: Se pasa al iniciar el servidor
-- ✅ **Tres herramientas disponibles**:
-  - `execute_query`: Ejecuta consultas SQL SELECT
-  - `list_tables`: Lista todas las tablas de la base de datos
-  - `describe_table`: Describe la estructura de una tabla
+- ✅ **Read-only**: Only allows `SELECT` queries
+- ✅ **Strict validation**: Multiple security layers
+- ✅ **Connection string by parameter**: Passed when starting the server
+- ✅ **Three available tools**:
+  - `execute_query`: Executes SQL SELECT queries
+  - `list_tables`: Lists all database tables
+  - `describe_table`: Describes the structure of a table
 
-## Seguridad Implementada
+## Implemented Security
 
-### ✅ **Permitido:**
-- Consultas `SELECT` simples y complejas
+### ✅ **Allowed:**
+- Simple and complex `SELECT` queries
 - `JOIN`, `GROUP BY`, `ORDER BY`, `HAVING`
-- Subconsultas y CTEs (solo con SELECT)
-- Funciones agregadas (`COUNT`, `SUM`, `AVG`, etc.)
+- Subqueries and CTEs (SELECT only)
+- Aggregate functions (`COUNT`, `SUM`, `AVG`, etc.)
 
-### ❌ **Bloqueado:**
-- **Operaciones de escritura**: `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE`
-- **Múltiples statements**: Consultas separadas por `;` 
-- **Funciones del sistema**: `xp_cmdshell`, `sp_configure`, `OPENROWSET`, etc.
-- **Comentarios**: `--` y `/* */` por seguridad
-- **Variables**: `DECLARE`, `SET` para prevenir inyección
-- **Procedimientos**: `EXEC`, `sp_executesql`
-- **CTEs maliciosos**: Common Table Expressions con operaciones de escritura
+### ❌ **Blocked:**
+- **Write operations**: `INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE`
+- **Multiple statements**: Queries separated by `;`
+- **System functions**: `xp_cmdshell`, `sp_configure`, `OPENROWSET`, etc.
+- **Comments**: `--` and `/* */` for security
+- **Variables**: `DECLARE`, `SET` to prevent injection
+- **Procedures**: `EXEC`, `sp_executesql`
+- **Malicious CTEs**: Common Table Expressions with write operations
 
-Ver `SECURITY_TESTS.md` para ejemplos detallados.
+See `SECURITY_TESTS.md` for detailed examples.
 
-## Instalación
+## Installation
 
 ```bash
 cd sqlserver
@@ -39,27 +39,27 @@ npm install
 npm run build
 ```
 
-## Uso
+## Usage
 
 ```bash
 node dist/index.js "Server=localhost;Database=mydb;User Id=user;Password=pass;Encrypt=true;TrustServerCertificate=true;"
 ```
 
-## Tools disponibles
+## Available Tools
 
-1. **execute_query**: Ejecuta consultas SELECT
-2. **list_tables**: Lista todas las tablas de la base de datos
-3. **describe_table**: Describe la estructura de una tabla específica
+1. **execute_query**: Executes SELECT queries
+2. **list_tables**: Lists all database tables
+3. **describe_table**: Describes the structure of a specific table
 
-## Formato de Connection String
+## Connection String Format
 
 ```
-Server=servidor;Database=basededatos;User Id=usuario;Password=contraseña;Encrypt=true;TrustServerCertificate=true;
+Server=server;Database=database;User Id=username;Password=password;Encrypt=true;TrustServerCertificate=true;
 ```
 
-## Ejemplo de configuración en Claude Desktop
+## Claude Desktop Configuration Example
 
-Agrega esto a tu archivo de configuración de Claude Desktop:
+Add this to your Claude Desktop configuration file:
 
 ```json
 {
@@ -67,7 +67,7 @@ Agrega esto a tu archivo de configuración de Claude Desktop:
     "sqlserver": {
       "command": "node",
       "args": [
-        "/ruta/a/tu/proyecto/sqlserver/dist/index.js",
+        "/path/to/your/project/sqlserver/dist/index.js",
         "Server=localhost;Database=mydb;User Id=user;Password=pass;Encrypt=true;TrustServerCertificate=true;"
       ]
     }
