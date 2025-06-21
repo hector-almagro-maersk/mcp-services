@@ -27,8 +27,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: '${{ inputs.mcp_service }}/package-lock.json'
     
     - name: Get MCP version
       id: get_version
@@ -48,12 +46,24 @@ jobs:
     - name: Install dependencies
       run: |
         cd ${{ inputs.mcp_service }}
-        npm ci
+        npm install
     
     - name: Build project
       run: |
         cd ${{ inputs.mcp_service }}
+        echo "Current directory: $(pwd)"
+        echo "Files before build:"
+        ls -la
         npm run build
+        echo "Files after build:"
+        ls -la
+        if [ -d "dist" ]; then
+          echo "dist directory contents:"
+          ls -la dist/
+        else
+          echo "ERROR: dist directory was not created!"
+          exit 1
+        fi
     
     - name: Run tests (if available)
       run: |
@@ -74,7 +84,12 @@ jobs:
         mkdir -p ../build-output
         
         # Copy essential files
-        cp -r dist ../build-output/
+        if [ -d "dist" ]; then
+          cp -r dist ../build-output/
+        else
+          echo "Warning: dist directory not found"
+          exit 1
+        fi
         cp package.json ../build-output/
         cp README.md ../build-output/ 2>/dev/null || echo "README.md not found"
         cp CHANGELOG.md ../build-output/ 2>/dev/null || echo "CHANGELOG.md not found"
