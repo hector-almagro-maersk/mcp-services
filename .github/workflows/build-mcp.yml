@@ -96,8 +96,8 @@ jobs:
         # Create the MCP server folder inside the package
         mkdir -p ../package-temp/mcp-${{ inputs.mcp_service }}-server
         
-        # Copy all dist contents to the MCP server folder
-        cp -r dist/* ../package-temp/mcp-${{ inputs.mcp_service }}-server/
+        # Copy all project contents to the MCP server folder (excluding node_modules and .git)
+        rsync -av --exclude='node_modules' --exclude='.git' --exclude='.github' --exclude='package-temp' ./ ../package-temp/mcp-${{ inputs.mcp_service }}-server/
         
         echo "Package structure created:"
         ls -la ../package-temp/
@@ -122,10 +122,15 @@ jobs:
         echo "**Artifact Name:** ${{ inputs.mcp_service }}-v${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📦 Artifact Contents" >> $GITHUB_STEP_SUMMARY
-        echo "The artifact contains the compiled JavaScript code organized in a folder structure:" >> $GITHUB_STEP_SUMMARY
+        echo "The artifact contains the complete MCP server project organized in a folder structure:" >> $GITHUB_STEP_SUMMARY
         echo "- \`mcp-${{ inputs.mcp_service }}-server/\` - Main folder containing:" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`index.js\` - Main compiled server file" >> $GITHUB_STEP_SUMMARY
-        echo "  - Additional compiled TypeScript files and resources (if any)" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`dist/\` - Compiled JavaScript code and resources" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`src/\` - Original TypeScript source code" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`package.json\` - Node.js package configuration" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`tsconfig.json\` - TypeScript configuration" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`README.md\` - Documentation and usage instructions" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`VERSION\` - Version information" >> $GITHUB_STEP_SUMMARY
+        echo "  - Additional configuration and documentation files" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔽 Download" >> $GITHUB_STEP_SUMMARY
         echo "The artifact can be downloaded from the **Actions** tab in this repository." >> $GITHUB_STEP_SUMMARY
