@@ -133,7 +133,7 @@ class SQLServerMCPServer {
             if (!args || typeof args !== 'object' || !('query' in args) || typeof args.query !== 'string') {
               throw new Error("Parameter 'query' of type string is required");
             }
-            return await this.executeValidatedQuery(args.query);
+            return await this.executeQuery(args.query);
           case "list_tables":
             return await this.listTables();
           case "describe_table":
@@ -166,6 +166,22 @@ class SQLServerMCPServer {
 
     // Strict security validation
     this.validateReadOnlyQuery(query);
+    
+    try {
+      const request = this.pool.request();
+      const result = await request.query(query);
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Query executed successfully. Rows found: ${result.recordset.length}\n\nResults:\n${JSON.stringify(result.recordset, null, 2)}`,
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`Error executing query: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   private validateReadOnlyQuery(query: string) {
@@ -232,28 +248,6 @@ class SQLServerMCPServer {
     }
     
     return true;
-  }
-
-  private async executeValidatedQuery(query: string) {
-    if (!this.pool) {
-      throw new Error("No database connection available");
-    }
-
-    try {
-      const request = this.pool.request();
-      const result = await request.query(query);
-      
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Query executed successfully. Rows found: ${result.recordset.length}\n\nResults:\n${JSON.stringify(result.recordset, null, 2)}`,
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Error executing query: ${error instanceof Error ? error.message : String(error)}`);
-    }
   }
 
   private async listTables() {
