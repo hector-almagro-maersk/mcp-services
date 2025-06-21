@@ -626,9 +626,9 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
       throw new Error("No database connection available");
     }
 
-    // Validate table name
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
-      throw new Error("Invalid table name. Use only letters, numbers, and underscores, starting with a letter or underscore.");
+    // Validate table name (allow schema.table format)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/.test(tableName)) {
+      throw new Error("Invalid table name. Use format 'table' or 'schema.table' with letters, numbers, and underscores.");
     }
 
     // Build CREATE TABLE statement
@@ -647,7 +647,12 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
       return definition;
     });
 
-    const createTableQuery = `CREATE TABLE [${tableName}] (${columnDefinitions.join(', ')})`;
+    // Handle schema.table format
+    const formattedTableName = tableName.includes('.') 
+      ? tableName.split('.').map(part => `[${part}]`).join('.')
+      : `[${tableName}]`;
+
+    const createTableQuery = `CREATE TABLE ${formattedTableName} (${columnDefinitions.join(', ')})`;
     
     const transaction = this.pool.transaction();
     
@@ -676,12 +681,17 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
       throw new Error("No database connection available");
     }
 
-    // Validate table name
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
-      throw new Error("Invalid table name. Use only letters, numbers, and underscores, starting with a letter or underscore.");
+    // Validate table name (allow schema.table format)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/.test(tableName)) {
+      throw new Error("Invalid table name. Use format 'table' or 'schema.table' with letters, numbers, and underscores.");
     }
 
-    const dropTableQuery = `DROP TABLE [${tableName}]`;
+    // Handle schema.table format
+    const formattedTableName = tableName.includes('.') 
+      ? tableName.split('.').map(part => `[${part}]`).join('.')
+      : `[${tableName}]`;
+
+    const dropTableQuery = `DROP TABLE ${formattedTableName}`;
     
     const transaction = this.pool.transaction();
     
@@ -710,9 +720,9 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
       throw new Error("No database connection available");
     }
 
-    // Validate table name
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
-      throw new Error("Invalid table name. Use only letters, numbers, and underscores, starting with a letter or underscore.");
+    // Validate table name (allow schema.table format)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/.test(tableName)) {
+      throw new Error("Invalid table name. Use format 'table' or 'schema.table' with letters, numbers, and underscores.");
     }
 
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
@@ -722,10 +732,16 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
     const columns = Object.keys(data);
     const values = Object.values(data);
     
-    // Build parameterized INSERT statement
+    // Build parameterized INSERT statement with proper schema handling
     const columnNames = columns.map(col => `[${col}]`).join(', ');
     const parameterNames = columns.map((_, i) => `@param${i}`).join(', ');
-    const insertQuery = `INSERT INTO [${tableName}] (${columnNames}) VALUES (${parameterNames})`;
+    
+    // Handle schema.table format
+    const formattedTableName = tableName.includes('.') 
+      ? tableName.split('.').map(part => `[${part}]`).join('.')
+      : `[${tableName}]`;
+    
+    const insertQuery = `INSERT INTO ${formattedTableName} (${columnNames}) VALUES (${parameterNames})`;
     
     const transaction = this.pool.transaction();
     
@@ -760,9 +776,9 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
       throw new Error("No database connection available");
     }
 
-    // Validate table name
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
-      throw new Error("Invalid table name. Use only letters, numbers, and underscores, starting with a letter or underscore.");
+    // Validate table name (allow schema.table format)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/.test(tableName)) {
+      throw new Error("Invalid table name. Use format 'table' or 'schema.table' with letters, numbers, and underscores.");
     }
 
     if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
@@ -776,9 +792,15 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
     const columns = Object.keys(data);
     const values = Object.values(data);
     
-    // Build parameterized UPDATE statement
+    // Build parameterized UPDATE statement with proper schema handling
     const setClause = columns.map((col, i) => `[${col}] = @param${i}`).join(', ');
-    const updateQuery = `UPDATE [${tableName}] SET ${setClause} WHERE ${whereClause}`;
+    
+    // Handle schema.table format
+    const formattedTableName = tableName.includes('.') 
+      ? tableName.split('.').map(part => `[${part}]`).join('.')
+      : `[${tableName}]`;
+    
+    const updateQuery = `UPDATE ${formattedTableName} SET ${setClause} WHERE ${whereClause}`;
     
     const transaction = this.pool.transaction();
     
@@ -813,16 +835,21 @@ ${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` :
       throw new Error("No database connection available");
     }
 
-    // Validate table name
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
-      throw new Error("Invalid table name. Use only letters, numbers, and underscores, starting with a letter or underscore.");
+    // Validate table name (allow schema.table format)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/.test(tableName)) {
+      throw new Error("Invalid table name. Use format 'table' or 'schema.table' with letters, numbers, and underscores.");
     }
 
     if (!whereClause.trim()) {
       throw new Error("WHERE clause is required for DELETE operations");
     }
 
-    const deleteQuery = `DELETE FROM [${tableName}] WHERE ${whereClause}`;
+    // Handle schema.table format
+    const formattedTableName = tableName.includes('.') 
+      ? tableName.split('.').map(part => `[${part}]`).join('.')
+      : `[${tableName}]`;
+
+    const deleteQuery = `DELETE FROM ${formattedTableName} WHERE ${whereClause}`;
     
     const transaction = this.pool.transaction();
     
