@@ -88,15 +88,27 @@ jobs:
           exit 1
         fi
         
-        echo "Packaging only dist contents for artifact..."
-        echo "dist directory contents:"
-        ls -la dist/
+        echo "Creating package structure with MCP server name folder..."
+        
+        # Create a temporary directory for packaging
+        mkdir -p ../package-temp
+        
+        # Create the MCP server folder inside the package
+        mkdir -p ../package-temp/mcp-${{ inputs.mcp_service }}-server
+        
+        # Copy all dist contents to the MCP server folder
+        cp -r dist/* ../package-temp/mcp-${{ inputs.mcp_service }}-server/
+        
+        echo "Package structure created:"
+        ls -la ../package-temp/
+        echo "Contents of mcp-${{ inputs.mcp_service }}-server folder:"
+        ls -la ../package-temp/mcp-${{ inputs.mcp_service }}-server/
     
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.mcp_service }}-v${{ steps.get_version.outputs.version }}
-        path: ${{ inputs.mcp_service }}/dist/
+        path: package-temp/
         retention-days: 90
         if-no-files-found: error
         overwrite: true
@@ -110,9 +122,10 @@ jobs:
         echo "**Artifact Name:** ${{ inputs.mcp_service }}-v${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📦 Artifact Contents" >> $GITHUB_STEP_SUMMARY
-        echo "The artifact contains only the compiled JavaScript code from the \`dist/\` directory:" >> $GITHUB_STEP_SUMMARY
-        echo "- \`index.js\` - Main compiled server file" >> $GITHUB_STEP_SUMMARY
-        echo "- Additional compiled TypeScript files (if any)" >> $GITHUB_STEP_SUMMARY
+        echo "The artifact contains the compiled JavaScript code organized in a folder structure:" >> $GITHUB_STEP_SUMMARY
+        echo "- \`mcp-${{ inputs.mcp_service }}-server/\` - Main folder containing:" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`index.js\` - Main compiled server file" >> $GITHUB_STEP_SUMMARY
+        echo "  - Additional compiled TypeScript files and resources (if any)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔽 Download" >> $GITHUB_STEP_SUMMARY
         echo "The artifact can be downloaded from the **Actions** tab in this repository." >> $GITHUB_STEP_SUMMARY
