@@ -89,20 +89,30 @@ jobs:
         fi
         
         echo "Creating package structure with MCP server name folder..."
+        echo "Current working directory: $(pwd)"
+        echo "Files in current directory before packaging:"
+        ls -la
         
-        # Create a temporary directory for packaging
-        mkdir -p ../package-temp
+        # Go back to root and create package directory
+        cd ..
+        rm -rf package-temp
+        mkdir -p package-temp
         
         # Create the MCP server folder inside the package
-        mkdir -p ../package-temp/mcp-${{ inputs.mcp_service }}-server
+        mkdir -p package-temp/mcp-${{ inputs.mcp_service }}-server
         
         # Copy all project contents to the MCP server folder (excluding node_modules and .git)
-        rsync -av --exclude='node_modules' --exclude='.git' --exclude='.github' --exclude='package-temp' ./ ../package-temp/mcp-${{ inputs.mcp_service }}-server/
+        echo "Copying files with rsync..."
+        rsync -av --exclude='node_modules' --exclude='.git' --exclude='.github' --exclude='package-temp' --exclude='.gitignore' ${{ inputs.mcp_service }}/ package-temp/mcp-${{ inputs.mcp_service }}-server/
         
         echo "Package structure created:"
-        ls -la ../package-temp/
+        ls -la package-temp/
         echo "Contents of mcp-${{ inputs.mcp_service }}-server folder:"
-        ls -la ../package-temp/mcp-${{ inputs.mcp_service }}-server/
+        ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/
+        echo "Contents of dist folder in package:"
+        ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/dist/
+        echo "Contents of src folder in package:"
+        ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/src/
     
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
@@ -112,6 +122,20 @@ jobs:
         retention-days: 90
         if-no-files-found: error
         overwrite: true
+    
+    - name: Verify artifact contents
+      run: |
+        echo "## 📋 Final Artifact Verification" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Complete file tree of the artifact:" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        find package-temp/ -type f | sort >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Count files
+        TOTAL_FILES=$(find package-temp/ -type f | wc -l)
+        echo "**Total files in artifact: $TOTAL_FILES**" >> $GITHUB_STEP_SUMMARY
     
     - name: Summary
       run: |
