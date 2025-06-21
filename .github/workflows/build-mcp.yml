@@ -15,6 +15,8 @@ on:
           # - database
           # - api-client
 
+run-name: 'Build MCP Server: ${{ inputs.mcp_service }}'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -80,43 +82,21 @@ jobs:
       run: |
         cd ${{ inputs.mcp_service }}
         
-        # Create a clean build directory
-        mkdir -p ../build-output
-        
-        # Copy essential files
-        if [ -d "dist" ]; then
-          cp -r dist ../build-output/
-        else
-          echo "Warning: dist directory not found"
+        # Verify dist directory exists
+        if [ ! -d "dist" ]; then
+          echo "ERROR: dist directory not found"
           exit 1
         fi
-        cp package.json ../build-output/
-        cp README.md ../build-output/ 2>/dev/null || echo "README.md not found"
-        cp CHANGELOG.md ../build-output/ 2>/dev/null || echo "CHANGELOG.md not found"
-        cp VERSION ../build-output/ 2>/dev/null || echo "VERSION not found"
-        cp *.sh ../build-output/ 2>/dev/null || echo "No shell scripts found"
         
-        # Copy configuration examples
-        cp *.json ../build-output/ 2>/dev/null || echo "No config files found"
-        
-        # Create info file
-        cat > ../build-output/BUILD_INFO.txt << EOF
-        MCP Service: ${{ inputs.mcp_service }}
-        Version: ${{ steps.get_version.outputs.version }}
-        Build Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-        Git Commit: ${{ github.sha }}
-        Built by: GitHub Actions
-        Repository: ${{ github.repository }}
-        EOF
-        
-        echo "Artifact contents:"
-        ls -la ../build-output/
+        echo "Packaging only dist contents for artifact..."
+        echo "dist directory contents:"
+        ls -la dist/
     
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.mcp_service }}-v${{ steps.get_version.outputs.version }}
-        path: build-output/
+        path: ${{ inputs.mcp_service }}/dist/
         retention-days: 90
         if-no-files-found: error
         overwrite: true
@@ -130,13 +110,9 @@ jobs:
         echo "**Artifact Name:** ${{ inputs.mcp_service }}-v${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 📦 Artifact Contents" >> $GITHUB_STEP_SUMMARY
-        echo "- \`dist/\` - Compiled JavaScript code" >> $GITHUB_STEP_SUMMARY
-        echo "- \`package.json\` - Package configuration" >> $GITHUB_STEP_SUMMARY
-        echo "- \`README.md\` - Documentation (if available)" >> $GITHUB_STEP_SUMMARY
-        echo "- \`CHANGELOG.md\` - Version history (if available)" >> $GITHUB_STEP_SUMMARY
-        echo "- \`VERSION\` - Version file (if available)" >> $GITHUB_STEP_SUMMARY
-        echo "- \`BUILD_INFO.txt\` - Build information" >> $GITHUB_STEP_SUMMARY
-        echo "- Configuration and script files" >> $GITHUB_STEP_SUMMARY
+        echo "The artifact contains only the compiled JavaScript code from the \`dist/\` directory:" >> $GITHUB_STEP_SUMMARY
+        echo "- \`index.js\` - Main compiled server file" >> $GITHUB_STEP_SUMMARY
+        echo "- Additional compiled TypeScript files (if any)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔽 Download" >> $GITHUB_STEP_SUMMARY
         echo "The artifact can be downloaded from the **Actions** tab in this repository." >> $GITHUB_STEP_SUMMARY
