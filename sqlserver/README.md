@@ -2,15 +2,23 @@
 
 A simple MCP (Model Context Protocol) server for performing read-only queries on SQL Server databases.
 
+## Version
+
+Current version: **1.0.0**
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
+
 ## Features
 
 - ✅ **Read-only**: Only allows `SELECT` queries
 - ✅ **Strict validation**: Multiple security layers
 - ✅ **Connection string by parameter**: Passed when starting the server
-- ✅ **Three available tools**:
+- ✅ **Versioning support**: Track changes and updates
+- ✅ **Four available tools**:
   - `execute_query`: Executes SQL SELECT queries
   - `list_tables`: Lists all database tables
   - `describe_table`: Describes the structure of a table
+  - `get_version`: Gets current version and changelog information
 
 ## Implemented Security
 
@@ -44,6 +52,7 @@ npm run build
 1. **execute_query**: Executes SELECT queries
 2. **list_tables**: Lists all database tables
 3. **describe_table**: Describes the structure of a specific table
+4. **get_version**: Gets current version and changelog information
 
 ## Connection String Format
 
@@ -68,3 +77,37 @@ Add this to your Claude Desktop configuration file:
   }
 }
 ```
+
+## Version Management
+
+### Checking Version
+
+You can check the current version using the `get_version` tool, which provides:
+- Current version number
+- Server information
+- Changelog for the current version
+
+### Updating Version
+
+Use the provided script to update versions:
+
+```bash
+# Increment patch version (1.0.0 -> 1.0.1)
+./update-version.sh patch "Fixed SQL validation bug"
+
+# Increment minor version (1.0.0 -> 1.1.0)
+./update-version.sh minor "Added new query feature"
+
+# Increment major version (1.0.0 -> 2.0.0)
+./update-version.sh major "Breaking API changes"
+```
+
+The script automatically:
+- Updates VERSION file
+- Updates package.json
+- Adds entry to CHANGELOG.md
+- Shows next steps for git tagging
+
+### Version History
+
+All changes are documented in [CHANGELOG.md](CHANGELOG.md) following the [Keep a Changelog](https://keepachangelog.com/) format.

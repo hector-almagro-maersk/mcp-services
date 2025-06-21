@@ -7,17 +7,32 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import sql from 'mssql';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 class SQLServerMCPServer {
   private server: Server;
   private pool: sql.ConnectionPool | null = null;
   private connectionString: string;
+  private version: string;
 
   constructor() {
+    // Read version from VERSION file
+    try {
+      this.version = readFileSync(join(__dirname, '..', 'VERSION'), 'utf-8').trim();
+    } catch (error) {
+      console.error("Warning: Could not read VERSION file, using default version");
+      this.version = "1.0.0";
+    }
+
     this.server = new Server(
       {
         name: "mcp-sqlserver-server",
-        version: "1.0.0",
+        version: this.version,
       },
       {
         capabilities: {
@@ -95,6 +110,14 @@ class SQLServerMCPServer {
               required: ["table_name"],
             },
           },
+          {
+            name: "get_version",
+            description: "Gets the current version of the MCP SQL Server",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
         ],
       };
     });
@@ -118,6 +141,8 @@ class SQLServerMCPServer {
               throw new Error("Parameter 'table_name' of type string is required");
             }
             return await this.describeTable(args.table_name);
+          case "get_version":
+            return await this.getVersion();
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -294,6 +319,43 @@ class SQLServerMCPServer {
       };
     } catch (error) {
       throw new Error(`Error describing table: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async getVersion() {
+    try {
+      // Read changelog for current version info
+      let changelogInfo = "";
+      try {
+        const changelogPath = join(__dirname, '..', 'CHANGELOG.md');
+        const changelog = readFileSync(changelogPath, 'utf-8');
+        
+        // Extract current version section from changelog
+        const versionPattern = new RegExp(`## \\[${this.version}\\].*?(?=## \\[|$)`, 's');
+        const match = changelog.match(versionPattern);
+        if (match) {
+          changelogInfo = match[0].trim();
+        }
+      } catch (error) {
+        changelogInfo = "Changelog information not available";
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `MCP SQL Server Version Information:
+
+Version: ${this.version}
+Server Name: mcp-sqlserver-server
+Description: MCP Server for SQL Server read-only operations
+
+${changelogInfo ? `\nChangelog for version ${this.version}:\n${changelogInfo}` : ''}`,
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`Error getting version info: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
