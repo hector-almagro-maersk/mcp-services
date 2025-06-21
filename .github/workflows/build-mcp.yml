@@ -144,20 +144,6 @@ jobs:
         if-no-files-found: error
         overwrite: true
     
-    - name: Verify artifact contents
-      run: |
-        echo "## 📋 Final Artifact Verification" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Complete file tree of the artifact:" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        find package-temp/ -type f | sort >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        # Count files
-        TOTAL_FILES=$(find package-temp/ -type f | wc -l)
-        echo "**Total files in artifact: $TOTAL_FILES**" >> $GITHUB_STEP_SUMMARY
-    
     - name: Summary
       run: |
         echo "## 🎉 Build Completed Successfully" >> $GITHUB_STEP_SUMMARY
