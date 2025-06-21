@@ -35,15 +35,21 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 
 ## Usage
 
-### Read-only mode (default)
+### Command Line
+
+#### Read-only mode (default)
 ```bash
 node dist/index.js "Server=localhost;Database=mydb;User Id=user;Password=pass;"
 ```
 
-### Edit mode (write operations enabled)
+#### Edit mode (write operations enabled)
 ```bash
 node dist/index.js --edit-mode "Server=localhost;Database=mydb;User Id=user;Password=pass;"
 ```
+
+### Claude Desktop Configuration
+
+Configure the server in your Claude Desktop settings by adding the `--edit-mode` flag to the `args` array when you need write operations enabled. See the [Claude Desktop Configuration Examples](#claude-desktop-configuration-examples) section below for detailed examples.
 
 ## Implemented Security
 
@@ -90,10 +96,19 @@ npm run build
 
 ## Available Tools
 
-1. **execute_query**: Executes SELECT queries
-2. **list_tables**: Lists all database tables
-3. **describe_table**: Describes the structure of a specific table
-4. **get_version**: Gets current version and changelog information
+### Read-only tools (always available):
+- **execute_query**: Executes SQL SELECT queries
+- **list_tables**: Lists all database tables  
+- **describe_table**: Describes the structure of a specific table
+- **get_version**: Gets current version and changelog information
+
+### Write tools (only available with `--edit-mode` flag):
+- **execute_write_query**: Executes write SQL queries (INSERT, UPDATE, DELETE, DDL)
+- **create_table**: Creates new tables with specified columns
+- **drop_table**: Drops existing tables
+- **insert_data**: Inserts new records into tables
+- **update_data**: Updates existing records in tables
+- **delete_data**: Deletes records from tables
 
 ## Connection String Format
 
@@ -101,10 +116,11 @@ npm run build
 Server=server;Database=database;User Id=username;Password=password;Encrypt=true;TrustServerCertificate=true;
 ```
 
-## Claude Desktop Configuration Example
+## Claude Desktop Configuration Examples
 
 Add this to your Claude Desktop configuration file:
 
+### Read-only mode (default, secure)
 ```json
 {
   "mcpServers": {
@@ -118,6 +134,40 @@ Add this to your Claude Desktop configuration file:
   }
 }
 ```
+
+### Edit mode (write operations enabled)
+```json
+{
+  "mcpServers": {
+    "sqlserver": {
+      "command": "node",
+      "args": [
+        "/path/to/your/project/sqlserver/dist/index.js",
+        "--edit-mode",
+        "Server=localhost;Database=mydb;User Id=user;Password=pass;Encrypt=true;TrustServerCertificate=true;"
+      ]
+    }
+  }
+}
+```
+
+### Alternative edit mode configuration (using -e flag)
+```json
+{
+  "mcpServers": {
+    "sqlserver": {
+      "command": "node",
+      "args": [
+        "/path/to/your/project/sqlserver/dist/index.js",
+        "-e",
+        "Server=localhost;Database=mydb;User Id=user;Password=pass;Encrypt=true;TrustServerCertificate=true;"
+      ]
+    }
+  }
+}
+```
+
+> **⚠️ Security Note**: Only use edit mode when you need write operations. Read-only mode is recommended for most use cases to prevent accidental data modifications.
 
 ## Version Management
 
