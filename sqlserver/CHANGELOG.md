@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2025-06-22
+
+### Added
+- **Configurable Edit Mode**: New optional `--edit-mode` flag to enable write operations
+- `execute_write_query` tool for executing INSERT, UPDATE, DELETE, and DDL operations
+- `create_table` tool for creating new tables with column definitions
+- `drop_table` tool for dropping existing tables
+- `update_data` tool for updating records in tables
+- `insert_data` tool for inserting new records into tables
+- `delete_data` tool for deleting records from tables
+- Command-line argument parsing for edit mode configuration
+- Enhanced error handling for write operations
+- Transaction support for data modification operations
+
+### Changed
+- Server remains in read-only mode by default for security
+- Enhanced tool descriptions to clarify read-only vs write capabilities
+- Improved connection string validation and error messages
+- Updated help text to include edit mode usage instructions
+
+### Security
+- Write operations only available when explicitly enabled via `--edit-mode` flag
+- Maintained strict validation for read operations
+- Added validation for write operations to prevent SQL injection
+- Transaction rollback on error for data integrity
+
 ## [1.0.0] - 2025-06-21
 
 ### Added
