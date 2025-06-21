@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && cp VERSION dist/ && cp CHANGELOG.md dist/",
+    "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
     "test": "./test-server.sh"
