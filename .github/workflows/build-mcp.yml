@@ -49,7 +49,7 @@ jobs:
       run: |
         cd ${{ inputs.mcp_service }}
         echo "Installing dependencies..."
-        npm ci --production=false
+        npm install
         echo "Dependencies installed successfully"
         echo "Node modules contents:"
         ls -la node_modules/ | head -20
