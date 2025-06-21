@@ -48,7 +48,11 @@ jobs:
     - name: Install dependencies
       run: |
         cd ${{ inputs.mcp_service }}
-        npm install
+        echo "Installing dependencies..."
+        npm ci --production=false
+        echo "Dependencies installed successfully"
+        echo "Node modules contents:"
+        ls -la node_modules/ | head -20
     
     - name: Build project
       run: |
@@ -56,7 +60,9 @@ jobs:
         echo "Current directory: $(pwd)"
         echo "Files before build:"
         ls -la
+        echo "Building project..."
         npm run build
+        echo "Build completed successfully"
         echo "Files after build:"
         ls -la
         if [ -d "dist" ]; then
@@ -88,6 +94,12 @@ jobs:
           exit 1
         fi
         
+        # Verify node_modules exists
+        if [ ! -d "node_modules" ]; then
+          echo "ERROR: node_modules directory not found"
+          exit 1
+        fi
+        
         echo "Creating package structure with MCP server name folder..."
         echo "Current working directory: $(pwd)"
         echo "Files in current directory before packaging:"
@@ -101,9 +113,9 @@ jobs:
         # Create the MCP server folder inside the package
         mkdir -p package-temp/mcp-${{ inputs.mcp_service }}-server
         
-        # Copy all project contents to the MCP server folder (excluding node_modules and .git)
-        echo "Copying files with rsync..."
-        rsync -av --exclude='node_modules' --exclude='.git' --exclude='.github' --exclude='package-temp' --exclude='.gitignore' ${{ inputs.mcp_service }}/ package-temp/mcp-${{ inputs.mcp_service }}-server/
+        # Copy all project contents to the MCP server folder (including node_modules, excluding only .git and .github)
+        echo "Copying files with rsync (including node_modules)..."
+        rsync -av --exclude='.git' --exclude='.github' --exclude='package-temp' --exclude='.gitignore' ${{ inputs.mcp_service }}/ package-temp/mcp-${{ inputs.mcp_service }}-server/
         
         echo "Package structure created:"
         ls -la package-temp/
@@ -113,6 +125,15 @@ jobs:
         ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/dist/
         echo "Contents of src folder in package:"
         ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/src/
+        echo "Verifying node_modules was copied:"
+        if [ -d "package-temp/mcp-${{ inputs.mcp_service }}-server/node_modules" ]; then
+          echo "✓ node_modules directory successfully copied"
+          echo "Sample of node_modules contents:"
+          ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/node_modules/ | head -10
+        else
+          echo "✗ ERROR: node_modules directory was not copied!"
+          exit 1
+        fi
     
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
@@ -150,6 +171,7 @@ jobs:
         echo "- \`mcp-${{ inputs.mcp_service }}-server/\` - Main folder containing:" >> $GITHUB_STEP_SUMMARY
         echo "  - \`dist/\` - Compiled JavaScript code and resources" >> $GITHUB_STEP_SUMMARY
         echo "  - \`src/\` - Original TypeScript source code" >> $GITHUB_STEP_SUMMARY
+        echo "  - \`node_modules/\` - All installed dependencies" >> $GITHUB_STEP_SUMMARY
         echo "  - \`package.json\` - Node.js package configuration" >> $GITHUB_STEP_SUMMARY
         echo "  - \`tsconfig.json\` - TypeScript configuration" >> $GITHUB_STEP_SUMMARY
         echo "  - \`README.md\` - Documentation and usage instructions" >> $GITHUB_STEP_SUMMARY
