@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2025-06-22
+
+### Fixed
+- Fixed `describe_table` function not working with schema-qualified table names (e.g., `pcm.Plans`)
+- The function now properly parses schema and table names when provided in `schema.table` format
+- Added proper schema filtering in the INFORMATION_SCHEMA.COLUMNS query
+
 ## [1.1.0] - 2025-06-22
 
 ### Added
