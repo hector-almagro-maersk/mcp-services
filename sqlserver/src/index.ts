@@ -490,7 +490,21 @@ class SQLServerMCPServer {
 
     try {
       const request = this.pool.request();
-      request.input('tableName', sql.VarChar, tableName);
+      
+      // Parse schema and table name
+      let schemaName = 'dbo'; // Default schema
+      let actualTableName = tableName;
+      
+      if (tableName.includes('.')) {
+        const parts = tableName.split('.');
+        if (parts.length === 2) {
+          schemaName = parts[0];
+          actualTableName = parts[1];
+        }
+      }
+      
+      request.input('schemaName', sql.VarChar, schemaName);
+      request.input('tableName', sql.VarChar, actualTableName);
       
       const result = await request.query(`
         SELECT 
@@ -502,7 +516,7 @@ class SQLServerMCPServer {
           NUMERIC_PRECISION,
           NUMERIC_SCALE
         FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = @tableName
+        WHERE TABLE_SCHEMA = @schemaName AND TABLE_NAME = @tableName
         ORDER BY ORDINAL_POSITION
       `);
 
