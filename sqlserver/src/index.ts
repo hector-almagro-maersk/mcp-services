@@ -401,20 +401,8 @@ class SQLServerMCPServer {
       throw new Error("Multiple SQL statements are not allowed in a single query");
     }
 
-    // 3. List of forbidden keywords (write operations)
-    const forbiddenKeywords = [
-      'insert', 'update', 'delete', 'drop', 'create', 'alter', 'truncate',
-      'exec', 'execute', 'sp_', 'xp_', 'merge', 'bulk', 'openrowset',
-      'opendatasource', 'openquery', 'openxml', 'writetext', 'updatetext',
-      'backup', 'restore', 'dbcc', 'shutdown', 'reconfigure', 'grant',
-      'revoke', 'deny', 'use ', 'go ', 'declare', 'set ', 'print'
-    ];
-
-    for (const keyword of forbiddenKeywords) {
-      if (normalizedQuery.includes(keyword)) {
-        throw new Error(`Forbidden operation detected: '${keyword}'. Only SELECT read queries are allowed.`);
-      }
-    }
+    // 3. Check for forbidden keywords in context (not as identifiers)
+    this.validateKeywordsInContext(normalizedQuery);
 
     // 4. Detect comments that could hide malicious code
     if (normalizedQuery.includes('/*') || normalizedQuery.includes('--')) {
@@ -436,6 +424,74 @@ class SQLServerMCPServer {
       if (normalizedQuery.includes(func)) {
         throw new Error(`Forbidden system function: '${func}'`);
       }
+    }
+  }
+
+  private validateKeywordsInContext(normalizedQuery: string) {
+    // List of forbidden keywords (write operations)
+    const forbiddenKeywords = [
+      'insert', 'update', 'delete', 'drop', 'create', 'alter', 'truncate',
+      'exec', 'execute', 'sp_', 'xp_', 'merge', 'bulk', 'openrowset',
+      'opendatasource', 'openquery', 'openxml', 'writetext', 'updatetext',
+      'backup', 'restore', 'dbcc', 'shutdown', 'reconfigure', 'grant',
+      'revoke', 'deny', 'use ', 'go ', 'declare', 'set ', 'print'
+    ];
+
+    for (const keyword of forbiddenKeywords) {
+      if (this.isKeywordUsedAsOperation(normalizedQuery, keyword)) {
+        throw new Error(`Forbidden operation detected: '${keyword}'. Only SELECT read queries are allowed.`);
+      }
+    }
+  }
+
+  private isKeywordUsedAsOperation(query: string, keyword: string): boolean {
+    // For keywords that end with space (like 'use ', 'go ', 'set '), use direct match
+    if (keyword.endsWith(' ')) {
+      return query.includes(keyword);
+    }
+
+    // For prefixes (like 'sp_', 'xp_'), check if they appear as function calls
+    if (keyword.endsWith('_')) {
+      // Look for the pattern: keyword followed by alphanumeric characters
+      const regex = new RegExp(`\\b${keyword.replace('_', '_')}[a-zA-Z0-9_]+\\b`, 'i');
+      return regex.test(query);
+    }
+
+    // For regular keywords, check if they appear as standalone operations
+    // Create word boundary regex to avoid matching within identifiers
+    const wordBoundaryRegex = new RegExp(`\\b${keyword}\\b`, 'i');
+    
+    if (!wordBoundaryRegex.test(query)) {
+      return false; // Keyword not found as a whole word
+    }
+
+    // Additional context-aware checks for common SQL operations
+    switch (keyword) {
+      case 'insert':
+        return /\binsert\s+into\b/i.test(query);
+      case 'update':
+        return /\bupdate\s+[\w\[\]\.]+\s+set\b/i.test(query);
+      case 'delete':
+        return /\bdelete\s+from\b/i.test(query);
+      case 'drop':
+        return /\bdrop\s+(table|view|procedure|function|index|database|schema)\b/i.test(query);
+      case 'create':
+        return /\bcreate\s+(table|view|procedure|function|index|database|schema)\b/i.test(query);
+      case 'alter':
+        return /\balter\s+(table|view|procedure|function|index|database|schema)\b/i.test(query);
+      case 'truncate':
+        return /\btruncate\s+table\b/i.test(query);
+      case 'exec':
+      case 'execute':
+        return /\b(exec|execute)\s+/i.test(query);
+      case 'merge':
+        return /\bmerge\s+[\w\[\]\.]+\s+using\b/i.test(query);
+      case 'declare':
+        return /\bdeclare\s+@/i.test(query);
+      default:
+        // For other keywords, if they appear as whole words, consider them suspicious
+        // This is a conservative approach for keywords we haven't specifically handled
+        return wordBoundaryRegex.test(query);
     }
   }
 

@@ -22,6 +22,16 @@ WITH recent_orders AS (
   SELECT * FROM orders WHERE created_date > '2024-01-01'
 )
 SELECT * FROM recent_orders;
+
+-- Reserved words as table/column names (NEW - Context-aware validation)
+SELECT * FROM MovesUpdate;                          -- ✅ ALLOWED: 'update' in table name
+SELECT IsDeleted FROM Users;                        -- ✅ ALLOWED: 'delete' in column name  
+SELECT CreateDate, UpdateTime FROM Orders;         -- ✅ ALLOWED: 'create', 'update' in column names
+SELECT * FROM TableInsertLog;                       -- ✅ ALLOWED: 'insert' in table name
+SELECT u.name FROM UserUpdates u;                  -- ✅ ALLOWED: 'update' in table name
+SELECT * FROM [Update];                             -- ✅ ALLOWED: bracketed reserved word
+SELECT * FROM dbo.Updates;                          -- ✅ ALLOWED: schema-qualified table
+SELECT 'update this' as message FROM Users;        -- ✅ ALLOWED: reserved word in string literal
 ```
 
 ## ❌ BLOCKED Queries
@@ -75,7 +85,7 @@ SELECT * FROM users;
 
 1. **Mandatory SELECT start**: Query must start with `SELECT`
 2. **Single statement**: Multiple queries separated by `;` are not allowed
-3. **Keyword blacklist**: Blocks INSERT, UPDATE, DELETE, DROP, etc.
+3. **Context-aware keyword validation**: Blocks INSERT, UPDATE, DELETE, DROP, etc. when used as operations, but allows them as table/column names
 4. **No comments**: Prevents hiding malicious code
 5. **CTE validation**: Common Table Expressions must contain only SELECT
 6. **System functions**: Blocks dangerous functions like `xp_cmdshell`
