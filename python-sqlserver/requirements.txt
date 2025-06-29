@@ -1,0 +1,3 @@
+# Python dependencies for python-sqlserver
+pyodbc
+mcp-server-fastmcp
