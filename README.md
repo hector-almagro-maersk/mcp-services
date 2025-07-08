@@ -15,9 +15,9 @@ Python-based MCP server for performing read-only and configurable write operatio
 ### ☸️ Kubernetes (`kubernetes/`)
 Python-based MCP server for monitoring and interacting with Kubernetes clusters.
 
-- **Features**: Pod management, health monitoring, restart tracking, log retrieval, namespace management
-- **Tools**: `list_pods`, `list_non_running_pods`, `list_restarted_pods`, `get_pod_details`, `get_pod_logs`, `list_namespaces`, `get_cluster_health`, `show_version`
-- **Implementation**: Python with kubernetes client library
+- **Features**: Pod management, health monitoring, restart tracking, log retrieval, namespace management, Azure AD authentication
+- **Tools**: `list_pods`, `list_non_running_pods`, `list_restarted_pods`, `get_pod_details`, `get_pod_logs`, `list_namespaces`, `get_cluster_health`, `azure_login`, `azure_status`, `restart_pod`, `show_version`
+- **Implementation**: Python with kubernetes client library and Azure CLI integration
 - **Documentation**: [kubernetes/README.md](kubernetes/README.md)
 
 ## 🚀 Quick Start

@@ -2,6 +2,22 @@
 
 All notable changes to the Kubernetes MCP Server will be documented in this file.
 
+## [1.1.0] - 2025-07-09
+
+### Added
+- **Azure AD Authentication Support**: New tools for managing Azure authentication for AKS clusters
+- **azure_login**: Interactive Azure AD login for AKS cluster access
+- **azure_status**: Check current Azure authentication status and active subscription
+- **restart_pod**: Restart a pod by automatically scaling its deployment to 0 and then back to 1 replica
+- Enhanced troubleshooting capabilities for authentication issues
+- Support for Azure CLI integration and token management
+- Pod restart functionality for stuck or problematic pods
+
+### Improved
+- Better error handling for authentication failures (401/403 errors)
+- Enhanced documentation with Azure authentication workflow
+- Troubleshooting guide for common authentication scenarios
+
 ## [1.0.0] - 2025-07-09
 
 ### Added
@@ -26,6 +42,9 @@ All notable changes to the Kubernetes MCP Server will be documented in this file
 - **get_pod_logs**: Retrieve pod logs for debugging
 - **list_namespaces**: Explore available namespaces
 - **get_cluster_health**: Overall cluster health monitoring
+- **azure_login**: Authenticate with Azure AD for AKS access
+- **azure_status**: Check Azure authentication status
+- **restart_pod**: Restart pods by scaling deployment to 0 and back to 1 replica
 - **show_version**: Display version and configuration information
 
 ### Configuration

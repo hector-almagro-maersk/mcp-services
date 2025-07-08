@@ -11,6 +11,7 @@ A Model Context Protocol (MCP) server that provides tools for monitoring and int
 - **Log Retrieval**: Fetch pod logs for troubleshooting
 - **Namespace Management**: List and explore available namespaces
 - **Cluster Health**: Get overall cluster health summary
+- **Azure Authentication**: Built-in Azure AD login and status checking for AKS clusters
 - **Flexible Configuration**: Support for different kubeconfig files, namespaces, and contexts
 
 ## Installation
@@ -122,6 +123,37 @@ Provides a summary of cluster health including pod states across all namespaces.
 #### 8. `show_version`
 Shows the current version and configuration information.
 
+#### 9. `azure_login`
+Authenticate with Azure AD for AKS cluster access. Helps resolve 403 Forbidden errors.
+
+**Returns:**
+- Authentication status and user information
+- Next steps for accessing clusters
+- Error handling for common issues
+
+#### 10. `azure_status`
+Check current Azure authentication status and subscription information.
+
+**Returns:**
+- Current authentication status
+- Active subscription details
+- Available subscriptions
+- Current Kubernetes context and namespace
+
+#### 11. `restart_pod`
+Restart a pod by automatically scaling its deployment to 0 and then back to 1 replica.
+
+**Parameters:**
+- `pod_name`: Name of the pod to restart
+- `namespace` (optional): Namespace where the pod is located
+
+**Returns:**
+- Restart operation status
+- Deployment name and scaling steps
+- New pod information after restart
+
+**Note:** This tool only works with pods managed by deployments. It will automatically find the deployment that owns the pod and perform a rolling restart.
+
 ## Pod Information Format
 
 Each pod entry includes:
@@ -170,6 +202,40 @@ python -m pytest test_server.py
 - `VERSION`: Version information
 - `CHANGELOG.md`: Version history and changes
 - `README.md`: This documentation
+
+## Azure AKS Authentication
+
+For Azure AKS clusters, you may encounter 403 Forbidden errors when trying to access cluster resources. This typically means you need to authenticate with Azure AD.
+
+### Quick Authentication
+Use the built-in authentication tools:
+
+```bash
+# Check current authentication status
+azure_status
+
+# Login to Azure AD (if not authenticated or tokens expired)
+azure_login
+```
+
+### Manual Authentication
+If you prefer to authenticate manually:
+
+```bash
+az login
+az account set --subscription "your-subscription-name"
+```
+
+### Common Authentication Issues
+
+1. **403 Forbidden**: Your Azure AD tokens have expired
+   - Solution: Run `azure_login` tool or `az login` manually
+
+2. **No subscription access**: You don't have access to the subscription containing the AKS cluster
+   - Solution: Contact your Azure administrator for proper permissions
+
+3. **RBAC permissions**: You're authenticated but don't have Kubernetes RBAC permissions
+   - Solution: Contact your Kubernetes cluster administrator for proper role assignments
 
 ## Troubleshooting
 
