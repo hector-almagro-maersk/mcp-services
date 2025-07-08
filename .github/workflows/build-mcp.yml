@@ -10,6 +10,7 @@ on:
         type: choice
         options:
           - sqlserver
+          - kubernetes
           # Add more MCP services here as they are created
           # - filesystem
           # - database
