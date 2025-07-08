@@ -25,6 +25,10 @@ coverage/
 .env.test.local
 .env.production.local
 
+# Configuration files with sensitive data
+config.json
+*/config.json
+
 # OS generated files
 .DS_Store
 .DS_Store?
