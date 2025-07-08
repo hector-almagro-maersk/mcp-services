@@ -12,6 +12,14 @@ Python-based MCP server for performing read-only and configurable write operatio
 - **Implementation**: Python with pyodbc
 - **Documentation**: [sqlserver/README.md](sqlserver/README.md)
 
+### ☸️ Kubernetes (`kubernetes/`)
+Python-based MCP server for monitoring and interacting with Kubernetes clusters.
+
+- **Features**: Pod management, health monitoring, restart tracking, log retrieval, namespace management
+- **Tools**: `list_pods`, `list_non_running_pods`, `list_restarted_pods`, `get_pod_details`, `get_pod_logs`, `list_namespaces`, `get_cluster_health`, `show_version`
+- **Implementation**: Python with kubernetes client library
+- **Documentation**: [kubernetes/README.md](kubernetes/README.md)
+
 ## 🚀 Quick Start
 
 ### Download Pre-built Artifacts
@@ -29,6 +37,13 @@ cd mcp-services
 
 # Set up Python environment for sqlserver
 cd sqlserver
+pip install -r requirements.txt
+
+# Validate the server
+python -m py_compile server.py
+
+# Or set up Python environment for kubernetes
+cd ../kubernetes
 pip install -r requirements.txt
 
 # Validate the server
@@ -58,6 +73,14 @@ See [.github/workflows/README.md](.github/workflows/README.md) for detailed work
 mcp-services/
 ├── README.md                 # This file
 ├── sqlserver/               # Python MCP Server for SQL Server
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── CHANGELOG.md
+│   ├── VERSION
+│   ├── test_server.py
+│   └── test_server_tools.py
+├── kubernetes/              # Python MCP Server for Kubernetes
 │   ├── README.md
 │   ├── requirements.txt
 │   ├── server.py
