@@ -31,8 +31,8 @@ cd mcp-services
 cd sqlserver
 pip install -r requirements.txt
 
-# Test the server
-python server.py --help
+# Validate the server
+python -m py_compile server.py
 ```
 
 ## 🏗️ Automated Builds

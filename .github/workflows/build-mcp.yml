@@ -80,8 +80,8 @@ jobs:
         # Check if it's a Python project
         if [ -f "requirements.txt" ]; then
           echo "Python project detected - no build step required"
-          echo "Validating Python server can run..."
-          python server.py --help || echo "Server help command completed"
+          echo "Validating Python server syntax..."
+          python -m py_compile server.py && echo "✓ Python syntax validation passed"
         elif [ -f "package.json" ]; then
           echo "Node.js project detected, building project..."
           npm run build
