@@ -11,6 +11,7 @@ on:
         options:
           - sqlserver
           - kubernetes
+          - azure-storage
           # Add more MCP services here as they are created
           # - filesystem
           # - database

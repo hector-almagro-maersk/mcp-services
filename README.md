@@ -20,6 +20,14 @@ Python-based MCP server for monitoring and interacting with Kubernetes clusters.
 - **Implementation**: Python with kubernetes client library and Azure CLI integration
 - **Documentation**: [kubernetes/README.md](kubernetes/README.md)
 
+### ☁️ Azure Storage (`azure-storage/`)
+Python-based MCP server for monitoring Azure Blob Storage containers.
+
+- **Features**: Container monitoring, blob listing, flexible authentication, detailed reporting, secure configuration
+- **Tools**: `list_containers`, `check_containers`, `check_container`, `list_blobs`, `show_version`
+- **Implementation**: Python with azure-storage-blob SDK
+- **Documentation**: [azure-storage/README.md](azure-storage/README.md)
+
 ## 🚀 Quick Start
 
 ### Download Pre-built Artifacts
@@ -44,6 +52,13 @@ python -m py_compile server.py
 
 # Or set up Python environment for kubernetes
 cd ../kubernetes
+pip install -r requirements.txt
+
+# Validate the server
+python -m py_compile server.py
+
+# Or set up Python environment for azure-storage
+cd ../azure-storage
 pip install -r requirements.txt
 
 # Validate the server
@@ -88,6 +103,14 @@ mcp-services/
 │   ├── VERSION
 │   ├── test_server.py
 │   └── test_server_tools.py
+├── azure-storage/           # Python MCP Server for Azure Blob Storage
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── CHANGELOG.md
+│   ├── VERSION
+│   ├── test_server.py
+│   └── config.json
 └── [other-services]/       # Future MCP services
 ```
 

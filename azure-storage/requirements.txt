@@ -1,0 +1,4 @@
+# Python dependencies for Azure Storage MCP server
+azure-storage-blob>=12.19.0
+azure-core>=1.29.0
+mcp

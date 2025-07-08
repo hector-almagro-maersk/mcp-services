@@ -1,0 +1,19 @@
+{
+  "containers": [
+    {
+      "container_name": "dbtriggerdata",
+      "account_name": "digitalportsalower",
+      "account_key": "FZqDs17u8duyIvlqXe1mEbSV7ULlEE8ok9w9KLl/vNqEH4jzpEXcTkqR2wVhMtmtLNBsOc4nO7Y3+AStJm+TDw=="
+    },
+    {
+      "container_name": "dbtriggerdatapcm",
+      "account_name": "digitalportsalower",
+      "account_key": "FZqDs17u8duyIvlqXe1mEbSV7ULlEE8ok9w9KLl/vNqEH4jzpEXcTkqR2wVhMtmtLNBsOc4nO7Y3+AStJm+TDw=="
+    },
+    {
+      "container_name": "email-attachments",
+      "account_name": "digitalportsalower",
+      "account_key": "FZqDs17u8duyIvlqXe1mEbSV7ULlEE8ok9w9KLl/vNqEH4jzpEXcTkqR2wVhMtmtLNBsOc4nO7Y3+AStJm+TDw=="
+    }
+  ]
+}
