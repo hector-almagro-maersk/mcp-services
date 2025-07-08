@@ -13,7 +13,7 @@ This directory contains automated workflow for building and managing MCP (Model 
 **Features:**
 - 📋 **Dropdown selection** of available MCP services
 - 🔄 **Version detection** from VERSION file or package.json
-- 🏗️ **Automated build process** with TypeScript compilation
+- 🏗️ **Automated build process** with support for Python and TypeScript projects
 - 🧪 **Optional testing** if test scripts are available
 - 📦 **Artifact generation** with naming format: `{service}-v{version}`
 - ♻️ **Artifact overwriting** for same versions
@@ -27,6 +27,16 @@ This directory contains automated workflow for building and managing MCP (Model 
 5. Click "Run workflow" to start the build
 
 **Artifact Contents:**
+
+For **Python MCP services:**
+- `server.py` - Python MCP server implementation
+- `requirements.txt` - Python dependencies
+- `test_server.py` - Unit tests (if available)
+- `README.md` - Documentation
+- `VERSION` - Version information
+- `CHANGELOG.md` - Version history
+
+For **TypeScript MCP services:**
 - `dist/` - Compiled JavaScript code
 - `package.json` - Package configuration
 - `README.md` - Documentation (if available)
@@ -61,6 +71,28 @@ Examples:
 
 To add a new MCP service to the automated build process:
 
+### For Python MCP Services
+
+1. **Create the service directory** with the required structure:
+   ```
+   your-mcp-service/
+   ├── server.py          # Required - Main MCP server
+   ├── requirements.txt   # Required - Python dependencies
+   ├── VERSION           # Required - Version information
+   ├── README.md         # Optional but recommended
+   ├── CHANGELOG.md      # Optional
+   └── test_server.py    # Optional - Unit tests
+   ```
+
+2. **Update the dropdown** in `build-mcp.yml`:
+   ```yaml
+   options:
+     - sqlserver
+     - your-mcp-service  # Add your service here
+   ```
+
+### For TypeScript MCP Services
+
 1. **Create the service directory** with the required structure:
    ```
    your-mcp-service/
@@ -93,14 +125,16 @@ To add a new MCP service to the automated build process:
 
 ### Build Failures
 1. Check the **Actions** tab for detailed error logs
-2. Verify that `package.json` and `tsconfig.json` exist
-3. Ensure all dependencies are properly declared
-4. Check that the `build` script is defined in package.json
+2. **For Python projects**: Verify that `requirements.txt` and `server.py` exist
+3. **For TypeScript projects**: Verify that `package.json` and `tsconfig.json` exist
+4. Ensure all dependencies are properly declared
+5. **For TypeScript projects**: Check that the `build` script is defined in package.json
 
 ### Missing Artifacts
 1. Verify the build completed successfully
-2. Check that the `dist/` directory was created during build
-3. Ensure retention period hasn't expired (90 days)
+2. **For TypeScript projects**: Check that the `dist/` directory was created during build
+3. **For Python projects**: Ensure `server.py` and `requirements.txt` exist
+4. Ensure retention period hasn't expired (90 days)
 
 ### Version Detection Issues
 The workflow uses this priority order for version detection:

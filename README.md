@@ -5,11 +5,11 @@ This collection contains multiple MCP (Model Context Protocol) servers for diffe
 ## Available Services
 
 ### 🗃️ SQL Server (`sqlserver/`)
-MCP server for performing read-only queries on SQL Server databases.
+Python-based MCP server for performing read-only and configurable write operations on SQL Server databases.
 
-- **Features**: Read-only access, strict security validation, version management
-- **Tools**: `execute_query`, `list_tables`, `describe_table`, `get_version`
-- **Version**: 1.0.0
+- **Features**: Read-only by default, configurable edit mode, strict security validation, automatic serialization
+- **Tools**: `execute_query`, `list_tables`, `describe_table`, `show_version`, and write tools in edit mode
+- **Implementation**: Python with pyodbc
 - **Documentation**: [sqlserver/README.md](sqlserver/README.md)
 
 ## 🚀 Quick Start
@@ -27,10 +27,12 @@ MCP server for performing read-only queries on SQL Server databases.
 git clone https://github.com/hector-almagro-maersk/mcp-services.git
 cd mcp-services
 
-# Build a specific service
+# Set up Python environment for sqlserver
 cd sqlserver
-npm install
-npm run build
+pip install -r requirements.txt
+
+# Test the server
+python server.py --help
 ```
 
 ## 🏗️ Automated Builds
@@ -55,15 +57,14 @@ See [.github/workflows/README.md](.github/workflows/README.md) for detailed work
 ```
 mcp-services/
 ├── README.md                 # This file
-├── sqlserver/               # MCP Server for SQL Server
+├── sqlserver/               # Python MCP Server for SQL Server
 │   ├── README.md
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── src/
-│   │   └── index.ts
-│   ├── SECURITY_TESTS.md
-│   ├── test-server.sh
-│   └── mcp-config-example.json
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── CHANGELOG.md
+│   ├── VERSION
+│   ├── test_server.py
+│   └── test_server_tools.py
 └── [other-services]/       # Future MCP services
 ```
 
@@ -80,9 +81,9 @@ To add a new MCP service:
 
 Each service includes:
 - `README.md` - Service-specific documentation
-- `package.json` - Dependencies and scripts
-- `src/` - MCP server source code
-- `mcp-config-example.json` - Configuration example for Claude Desktop
+- `requirements.txt` - Python dependencies (for Python services)
+- `server.py` - MCP server implementation (for Python services)
+- Configuration examples and documentation
 
 ## Contributing
 

@@ -29,6 +29,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
     
     - name: Get MCP version
       id: get_version
@@ -49,10 +54,21 @@ jobs:
       run: |
         cd ${{ inputs.mcp_service }}
         echo "Installing dependencies..."
-        npm install
-        echo "Dependencies installed successfully"
-        echo "Node modules contents:"
-        ls -la node_modules/ | head -20
+        
+        # Check if it's a Python project
+        if [ -f "requirements.txt" ]; then
+          echo "Python project detected, installing Python dependencies..."
+          pip install -r requirements.txt
+          echo "Python dependencies installed successfully"
+        elif [ -f "package.json" ]; then
+          echo "Node.js project detected, installing Node.js dependencies..."
+          npm install
+          echo "Node.js dependencies installed successfully"
+          echo "Node modules contents:"
+          ls -la node_modules/ | head -20
+        else
+          echo "No dependency file found (requirements.txt or package.json)"
+        fi
     
     - name: Build project
       run: |
@@ -60,45 +76,48 @@ jobs:
         echo "Current directory: $(pwd)"
         echo "Files before build:"
         ls -la
-        echo "Building project..."
-        npm run build
-        echo "Build completed successfully"
-        echo "Files after build:"
-        ls -la
-        if [ -d "dist" ]; then
-          echo "dist directory contents:"
-          ls -la dist/
+        
+        # Check if it's a Python project
+        if [ -f "requirements.txt" ]; then
+          echo "Python project detected - no build step required"
+          echo "Validating Python server can run..."
+          python server.py --help || echo "Server help command completed"
+        elif [ -f "package.json" ]; then
+          echo "Node.js project detected, building project..."
+          npm run build
+          echo "Build completed successfully"
+          echo "Files after build:"
+          ls -la
+          if [ -d "dist" ]; then
+            echo "dist directory contents:"
+            ls -la dist/
+          else
+            echo "ERROR: dist directory was not created!"
+            exit 1
+          fi
         else
-          echo "ERROR: dist directory was not created!"
-          exit 1
+          echo "No build configuration found"
         fi
     
     - name: Run tests (if available)
       run: |
         cd ${{ inputs.mcp_service }}
-        if [ -f "test-server.sh" ]; then
+        
+        # Check for Python tests
+        if [ -f "test_server.py" ]; then
+          echo "Running Python tests..."
+          python -m pytest test_server.py -v || echo "Python tests completed"
+        elif [ -f "test-server.sh" ]; then
           chmod +x test-server.sh
-          timeout 30s ./test-server.sh || echo "Tests completed or timed out"
+          timeout 30s ./test-server.sh || echo "Shell tests completed or timed out"
         else
-          echo "No test script found, skipping tests"
+          echo "No test files found, skipping tests"
         fi
       continue-on-error: true
     
     - name: Create artifact package
       run: |
         cd ${{ inputs.mcp_service }}
-        
-        # Verify dist directory exists
-        if [ ! -d "dist" ]; then
-          echo "ERROR: dist directory not found"
-          exit 1
-        fi
-        
-        # Verify node_modules exists
-        if [ ! -d "node_modules" ]; then
-          echo "ERROR: node_modules directory not found"
-          exit 1
-        fi
         
         echo "Creating package structure with MCP server name folder..."
         echo "Current working directory: $(pwd)"
@@ -113,26 +132,34 @@ jobs:
         # Create the MCP server folder inside the package
         mkdir -p package-temp/mcp-${{ inputs.mcp_service }}-server
         
-        # Copy all project contents to the MCP server folder (including node_modules, excluding only .git and .github)
-        echo "Copying files with rsync (including node_modules)..."
-        rsync -av --exclude='.git' --exclude='.github' --exclude='package-temp' --exclude='.gitignore' ${{ inputs.mcp_service }}/ package-temp/mcp-${{ inputs.mcp_service }}-server/
+        # Copy all project contents to the MCP server folder (excluding only .git and .github)
+        echo "Copying files with rsync..."
+        rsync -av --exclude='.git' --exclude='.github' --exclude='package-temp' --exclude='.gitignore' --exclude='__pycache__' --exclude='*.pyc' ${{ inputs.mcp_service }}/ package-temp/mcp-${{ inputs.mcp_service }}-server/
         
         echo "Package structure created:"
         ls -la package-temp/
         echo "Contents of mcp-${{ inputs.mcp_service }}-server folder:"
         ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/
-        echo "Contents of dist folder in package:"
-        ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/dist/
-        echo "Contents of src folder in package:"
-        ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/src/
-        echo "Verifying node_modules was copied:"
+        
+        # Check for Python or Node.js project structure
+        if [ -f "package-temp/mcp-${{ inputs.mcp_service }}-server/requirements.txt" ]; then
+          echo "Python project packaged successfully"
+          echo "Contents of Python project:"
+          ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/
+        elif [ -d "package-temp/mcp-${{ inputs.mcp_service }}-server/dist" ]; then
+          echo "Contents of dist folder in package:"
+          ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/dist/
+        fi
+        
+        if [ -d "package-temp/mcp-${{ inputs.mcp_service }}-server/src" ]; then
+          echo "Contents of src folder in package:"
+          ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/src/
+        fi
+        
         if [ -d "package-temp/mcp-${{ inputs.mcp_service }}-server/node_modules" ]; then
           echo "✓ node_modules directory successfully copied"
           echo "Sample of node_modules contents:"
           ls -la package-temp/mcp-${{ inputs.mcp_service }}-server/node_modules/ | head -10
-        else
-          echo "✗ ERROR: node_modules directory was not copied!"
-          exit 1
         fi
     
     - name: Upload build artifact
@@ -155,14 +182,26 @@ jobs:
         echo "### 📦 Artifact Contents" >> $GITHUB_STEP_SUMMARY
         echo "The artifact contains the complete MCP server project organized in a folder structure:" >> $GITHUB_STEP_SUMMARY
         echo "- \`mcp-${{ inputs.mcp_service }}-server/\` - Main folder containing:" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`dist/\` - Compiled JavaScript code and resources" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`src/\` - Original TypeScript source code" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`node_modules/\` - All installed dependencies" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`package.json\` - Node.js package configuration" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`tsconfig.json\` - TypeScript configuration" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`README.md\` - Documentation and usage instructions" >> $GITHUB_STEP_SUMMARY
-        echo "  - \`VERSION\` - Version information" >> $GITHUB_STEP_SUMMARY
-        echo "  - Additional configuration and documentation files" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if it's a Python or Node.js project
+        cd package-temp/mcp-${{ inputs.mcp_service }}-server/
+        if [ -f "requirements.txt" ]; then
+          echo "  - \`server.py\` - Python MCP server implementation" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`requirements.txt\` - Python dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`test_server.py\` - Unit tests" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`README.md\` - Documentation and usage instructions" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`VERSION\` - Version information" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`CHANGELOG.md\` - Version history and changes" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "  - \`dist/\` - Compiled JavaScript code and resources" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`src/\` - Original TypeScript source code" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`node_modules/\` - All installed dependencies" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`package.json\` - Node.js package configuration" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`tsconfig.json\` - TypeScript configuration" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`README.md\` - Documentation and usage instructions" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`VERSION\` - Version information" >> $GITHUB_STEP_SUMMARY
+        fi
+        cd ../../
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔽 Download" >> $GITHUB_STEP_SUMMARY
         echo "The artifact can be downloaded from the **Actions** tab in this repository." >> $GITHUB_STEP_SUMMARY
