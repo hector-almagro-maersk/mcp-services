@@ -1,0 +1,3 @@
+# Python dependencies for Kubernetes MCP server
+kubernetes>=28.0.0
+mcp
