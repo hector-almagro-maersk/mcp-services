@@ -1,9 +1,13 @@
 import os
 import re
+import urllib3
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any, Optional
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+
+# Disable SSL warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_kubeconfig_path() -> str:
@@ -67,6 +71,12 @@ def initialize_kubernetes_client():
         else:
             # Try in-cluster config (for when running inside a pod)
             config.load_incluster_config()
+        
+        # Configure SSL settings to handle certificate issues
+        configuration = client.Configuration.get_default_copy()
+        configuration.verify_ssl = False
+        configuration.ssl_ca_cert = None
+        client.Configuration.set_default(configuration)
         
         return client.CoreV1Api()
     except Exception as e:
