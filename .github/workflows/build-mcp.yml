@@ -12,6 +12,7 @@ on:
           - sqlserver
           - kubernetes
           - azure-storage
+          - spotify-tools
           # Add more MCP services here as they are created
           # - filesystem
           # - database
