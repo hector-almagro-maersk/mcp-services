@@ -28,6 +28,22 @@ Python-based MCP server for monitoring Azure Blob Storage containers.
 - **Implementation**: Python with azure-storage-blob SDK
 - **Documentation**: [azure-storage/README.md](azure-storage/README.md)
 
+### 📟 On-Call Rotation (`oncall-rotation/`)
+Python-based MCP server to compute the engineer on duty for any date using a cyclic rotation plus optional overrides.
+
+- **Features**: Deterministic rotation, ad-hoc & persistent overrides, negative date support, changelog reporting
+- **Tools**: `get_oncall`, `show_version`
+- **Implementation**: Pure Python (no external date libs) using `datetime`
+- **Documentation**: [oncall-rotation/README.md](oncall-rotation/README.md)
+
+### 🎵 Spotify Tools (`spotify-tools/`)
+Python-based MCP server for comprehensive read-only access to Spotify music metadata and discovery features.
+
+- **Features**: Unified search, track/album/artist/playlist detail retrieval, recommendations, browse (new releases, featured playlists, categories), audio features & analysis, market-specific queries
+- **Tools**: `search_spotify`, `get_track_info`, `get_album_info`, `get_artist_info`, `get_playlist_info`, `get_recommendations`, `get_new_releases`, `get_featured_playlists`, `get_browse_categories`, `show_version` (and additional specialized tools)
+- **Implementation**: Python using Spotify Web API via `requests`
+- **Documentation**: [spotify-tools/README.md](spotify-tools/README.md)
+
 ## 🚀 Quick Start
 
 ### Download Pre-built Artifacts
@@ -59,6 +75,20 @@ python -m py_compile server.py
 
 # Or set up Python environment for azure-storage
 cd ../azure-storage
+pip install -r requirements.txt
+
+# Validate the server
+python -m py_compile server.py
+
+# Or set up Python environment for oncall-rotation
+cd ../oncall-rotation
+pip install -r requirements.txt
+
+# Validate the server
+python -m py_compile server.py
+
+# Or set up Python environment for spotify-tools
+cd ../spotify-tools
 pip install -r requirements.txt
 
 # Validate the server
@@ -111,6 +141,19 @@ mcp-services/
 │   ├── VERSION
 │   ├── test_server.py
 │   └── config.json
+├── oncall-rotation/         # Python MCP Server for on-call engineer rotation
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── CHANGELOG.md
+│   ├── VERSION
+│   └── test_server.py
+├── spotify-tools/           # Python MCP Server for Spotify metadata & discovery
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── CHANGELOG.md
+│   └── VERSION
 └── [other-services]/       # Future MCP services
 ```
 
