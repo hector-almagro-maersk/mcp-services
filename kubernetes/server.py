@@ -67,7 +67,12 @@ def initialize_kubernetes_client():
         context = get_context()
         
         if os.path.exists(kubeconfig_path):
-            config.load_kube_config(config_file=kubeconfig_path, context=context)
+            try:
+                config.load_kube_config(config_file=kubeconfig_path, context=context)
+            except Exception:
+                # If loading kubeconfig fails (for example in CI or when file is invalid),
+                # attempt to load in-cluster config as a fallback.
+                config.load_incluster_config()
         else:
             # Try in-cluster config (for when running inside a pod)
             config.load_incluster_config()
@@ -617,7 +622,10 @@ def restart_pod(pod_name: str, namespace: Optional[str] = None) -> str:
         # First, try to get the pod to find its deployment/replicaset
         pod = None
         deployment_name = None
-        
+        # Capture ordered steps for tracing the restart process. Initialize early so
+        # any early-return paths can append messages safely.
+        steps = []
+
         try:
             pod = v1.read_namespaced_pod(name=pod_name, namespace=target_namespace)
         except ApiException as e:

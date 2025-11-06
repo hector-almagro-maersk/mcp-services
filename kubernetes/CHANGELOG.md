@@ -2,6 +2,15 @@
 
 All notable changes to the Kubernetes MCP Server will be documented in this file.
 
+## [1.1.1] - 2025-11-06
+
+### Fixed
+- Prevent UnboundLocalError in `restart_pod` when falling back to label-based pod lookup by initializing the internal `steps` list early so it can be appended to from any code path.
+- Make kubeconfig loading more robust: if `load_kube_config` raises (for example when the kubeconfig is missing or invalid), the client now attempts `load_incluster_config()` as a fallback.
+
+### Tests
+- Added minor robustness improvements and verified existing unit tests for the kubernetes MCP server pass locally.
+
 ## [1.1.0] - 2025-07-09
 
 ### Added
