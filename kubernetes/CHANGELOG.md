@@ -2,6 +2,11 @@
 
 All notable changes to the Kubernetes MCP Server will be documented in this file.
 
+## [1.2.0] - 2026-02-10
+
+### Added
+- **get_pod_appsettings_file**: New tool to read the `appsettings.Production.json` configuration file from a running pod via the Kubernetes exec API. Automatically searches common .NET application paths (`/app/`, `/app/config/`, `/`). Supports specifying a target container and returns pretty-printed JSON content.
+
 ## [1.1.1] - 2025-11-06
 
 ### Fixed

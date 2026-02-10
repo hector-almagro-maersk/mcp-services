@@ -12,6 +12,7 @@ A Model Context Protocol (MCP) server that provides tools for monitoring and int
 - **Namespace Management**: List and explore available namespaces
 - **Cluster Health**: Get overall cluster health summary
 - **Azure Authentication**: Built-in Azure AD login and status checking for AKS clusters
+- **File Inspection**: Read configuration files (e.g., `appsettings.Production.json`) from running pods
 - **Flexible Configuration**: Support for different kubeconfig files, namespaces, and contexts
 
 ## Installation
@@ -153,6 +154,31 @@ Restart a pod by automatically scaling its deployment to 0 and then back to 1 re
 - New pod information after restart
 
 **Note:** This tool only works with pods managed by deployments. It will automatically find the deployment that owns the pod and perform a rolling restart.
+
+#### 12. `get_pod_appsettings_file`
+Read the content of the `appsettings.Production.json` configuration file from a running pod.
+
+Uses the Kubernetes exec API to run `cat` inside the container and retrieve the file content. The tool automatically searches the following common .NET application paths:
+1. `/app/appsettings.Production.json`
+2. `/app/config/appsettings.Production.json`
+3. `/appsettings.Production.json`
+
+**Parameters:**
+- `pod_name` (required): Name of the pod to read the file from
+- `namespace` (optional): Namespace of the pod
+- `container` (optional): Container name within the pod (defaults to the first container)
+
+**Example Response:**
+```json
+{
+  "status": "success",
+  "pod": "my-app-7d4b9c8f6d-xyz12",
+  "namespace": "production",
+  "container": "my-app",
+  "file_path": "/app/appsettings.Production.json",
+  "content": "{ ... }"
+}
+```
 
 ## Pod Information Format
 

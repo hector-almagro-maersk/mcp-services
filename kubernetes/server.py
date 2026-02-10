@@ -5,6 +5,7 @@ from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any, Optional
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
+from kubernetes.stream import stream
 
 # Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -788,6 +789,127 @@ def restart_pod(pod_name: str, namespace: Optional[str] = None) -> str:
             "status": "error",
             "message": f"Error restarting pod: {e}"
         })
+
+
+@mcp.tool(description="Read the content of the appsettings.Production.json file from a specific pod.")
+def get_pod_appsettings_file(pod_name: str, namespace: Optional[str] = None, container: Optional[str] = None) -> str:
+    """
+    Read the content of the appsettings.Production.json file from a running pod.
+    Uses 'cat' via the Kubernetes exec API to retrieve the file content.
+
+    The tool searches for the file in common .NET application paths:
+      1. /app/appsettings.Production.json
+      2. /app/config/appsettings.Production.json
+      3. /appsettings.Production.json
+
+    Args:
+        pod_name: Name of the pod to read the file from.
+        namespace: Optional namespace. If not provided, uses the configured default namespace.
+        container: Optional container name. If not provided, uses the first container in the pod.
+
+    Returns:
+        JSON string containing the file content or an error message.
+    """
+    try:
+        import json
+        v1 = initialize_kubernetes_client()
+        target_namespace = namespace or get_namespace()
+
+        # Verify the pod exists
+        try:
+            pod = v1.read_namespaced_pod(name=pod_name, namespace=target_namespace)
+        except ApiException as e:
+            if e.status == 404:
+                return json.dumps({
+                    "status": "error",
+                    "message": f"Pod '{pod_name}' not found in namespace '{target_namespace}'"
+                }, indent=2)
+            raise
+
+        # Determine the target container
+        target_container = container
+        if not target_container and pod.spec.containers:
+            target_container = pod.spec.containers[0].name
+
+        # Common paths where appsettings.Production.json might be located
+        search_paths = [
+            "/app/appsettings.Production.json",
+            "/app/config/appsettings.Production.json",
+            "/appsettings.Production.json",
+        ]
+
+        # Try each path until the file is found
+        for file_path in search_paths:
+            try:
+                exec_command = ["cat", file_path]
+                resp = stream(
+                    v1.connect_get_namespaced_pod_exec,
+                    pod_name,
+                    target_namespace,
+                    command=exec_command,
+                    container=target_container,
+                    stderr=True,
+                    stdin=False,
+                    stdout=True,
+                    tty=False,
+                    _preload_content=False,
+                )
+
+                stdout_data = ""
+                stderr_data = ""
+                while resp.is_open():
+                    resp.update(timeout=10)
+                    if resp.peek_stdout():
+                        stdout_data += resp.read_stdout()
+                    if resp.peek_stderr():
+                        stderr_data += resp.read_stderr()
+                resp.close()
+
+                return_code = resp.returncode
+
+                if return_code == 0 and stdout_data.strip():
+                    # Try to parse as JSON for pretty-printing
+                    try:
+                        parsed = json.loads(stdout_data)
+                        file_content = json.dumps(parsed, indent=2)
+                    except json.JSONDecodeError:
+                        file_content = stdout_data
+
+                    return json.dumps({
+                        "status": "success",
+                        "pod": pod_name,
+                        "namespace": target_namespace,
+                        "container": target_container,
+                        "file_path": file_path,
+                        "content": file_content
+                    }, indent=2)
+
+            except ApiException:
+                continue
+            except Exception:
+                continue
+
+        return json.dumps({
+            "status": "error",
+            "message": f"File 'appsettings.Production.json' not found in pod '{pod_name}'",
+            "pod": pod_name,
+            "namespace": target_namespace,
+            "container": target_container,
+            "searched_paths": search_paths
+        }, indent=2)
+
+    except ApiException as e:
+        import json
+        return json.dumps({
+            "status": "error",
+            "message": f"Kubernetes API error: {e.status} - {e.reason}"
+        }, indent=2)
+    except Exception as e:
+        import json
+        return json.dumps({
+            "status": "error",
+            "message": f"Error reading file from pod: {e}"
+        }, indent=2)
 
 
 if __name__ == "__main__":
