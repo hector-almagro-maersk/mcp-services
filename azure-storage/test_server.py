@@ -6,6 +6,7 @@ from server import (
     get_storage_config,
     create_blob_service_client,
     check_container_has_blobs,
+    download_blob,
     mcp
 )
 
@@ -218,6 +219,219 @@ class TestMCPTools(unittest.TestCase):
         self.assertEqual(result_data["containers_with_blobs"], 1)
         self.assertEqual(result_data["empty_containers"], 1)
         self.assertEqual(result_data["error_containers"], 0)
+
+
+class TestDownloadBlobTool(unittest.TestCase):
+    """Test the download_blob MCP tool."""
+
+    @patch('server.generate_blob_sas', return_value='fake-sas-token')
+    @patch('server.create_blob_service_client')
+    @patch('server.get_storage_config')
+    def test_download_blob_success(self, mock_get_config, mock_create_client, mock_gen_sas):
+        """Test successful blob download URL generation."""
+        mock_get_config.return_value = {
+            "containers": [
+                {
+                    "container_name": "test-container",
+                    "account_name": "testaccount",
+                    "account_key": "testkey123"
+                }
+            ]
+        }
+
+        mock_blob_service = MagicMock()
+        mock_container_client = MagicMock()
+        mock_blob_client = MagicMock()
+        mock_container_client.exists.return_value = True
+        mock_blob_client.exists.return_value = True
+
+        mock_blob_props = MagicMock()
+        mock_blob_props.size = 1024
+        mock_blob_props.content_settings.content_type = "text/plain"
+        mock_blob_props.last_modified = None
+        mock_blob_client.get_blob_properties.return_value = mock_blob_props
+
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service.get_container_client.return_value = mock_container_client
+        mock_create_client.return_value = mock_blob_service
+
+        result = download_blob("test-container", "myfile.txt", 30)
+        result_data = json.loads(result)
+
+        self.assertEqual(result_data["container_name"], "test-container")
+        self.assertEqual(result_data["blob_name"], "myfile.txt")
+        self.assertIn("download_url", result_data)
+        self.assertIn("fake-sas-token", result_data["download_url"])
+        self.assertEqual(result_data["size"], 1024)
+        self.assertEqual(result_data["expiry_minutes"], 30)
+
+    @patch('server.generate_blob_sas', return_value='fake-sas-token')
+    @patch('server.create_blob_service_client')
+    @patch('server.get_storage_config')
+    def test_download_blob_url_encodes_blob_name(self, mock_get_config, mock_create_client, mock_gen_sas):
+        """Test that blob names with special characters are URL-encoded."""
+        mock_get_config.return_value = {
+            "containers": [
+                {
+                    "container_name": "test-container",
+                    "account_name": "testaccount",
+                    "account_key": "testkey123"
+                }
+            ]
+        }
+
+        mock_blob_service = MagicMock()
+        mock_container_client = MagicMock()
+        mock_blob_client = MagicMock()
+        mock_container_client.exists.return_value = True
+        mock_blob_client.exists.return_value = True
+
+        mock_blob_props = MagicMock()
+        mock_blob_props.size = 512
+        mock_blob_props.content_settings.content_type = "text/csv"
+        mock_blob_props.last_modified = None
+        mock_blob_client.get_blob_properties.return_value = mock_blob_props
+
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service.get_container_client.return_value = mock_container_client
+        mock_create_client.return_value = mock_blob_service
+
+        result = download_blob("test-container", "reports/my file (2).csv", 5)
+        result_data = json.loads(result)
+
+        self.assertIn("download_url", result_data)
+        # Spaces and parens should be encoded, slashes preserved
+        self.assertIn("reports/my%20file%20%282%29.csv", result_data["download_url"])
+        self.assertNotIn("reports/my file (2).csv?", result_data["download_url"])
+
+    @patch('server.generate_blob_sas', return_value='fake-sas-token')
+    @patch('server.create_blob_service_client')
+    @patch('server.get_storage_config')
+    def test_download_blob_content_disposition(self, mock_get_config, mock_create_client, mock_gen_sas):
+        """Test that SAS is generated with Content-Disposition attachment header."""
+        mock_get_config.return_value = {
+            "containers": [
+                {
+                    "container_name": "c",
+                    "account_name": "a",
+                    "account_key": "k"
+                }
+            ]
+        }
+
+        mock_blob_service = MagicMock()
+        mock_container_client = MagicMock()
+        mock_blob_client = MagicMock()
+        mock_container_client.exists.return_value = True
+        mock_blob_client.exists.return_value = True
+
+        mock_blob_props = MagicMock()
+        mock_blob_props.size = 100
+        mock_blob_props.content_settings.content_type = "application/octet-stream"
+        mock_blob_props.last_modified = None
+        mock_blob_client.get_blob_properties.return_value = mock_blob_props
+
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service.get_container_client.return_value = mock_container_client
+        mock_create_client.return_value = mock_blob_service
+
+        download_blob("c", "folder/data.bin", 5)
+
+        # Verify generate_blob_sas was called with content_disposition
+        mock_gen_sas.assert_called_once()
+        call_kwargs = mock_gen_sas.call_args[1]
+        self.assertIn("content_disposition", call_kwargs)
+        self.assertIn('attachment; filename="data.bin"', call_kwargs["content_disposition"])
+
+    @patch('server.get_storage_config')
+    def test_download_blob_container_not_configured(self, mock_get_config):
+        """Test download_blob with a container not in the configuration."""
+        mock_get_config.return_value = {
+            "containers": [
+                {"container_name": "other-container", "account_name": "a", "account_key": "k"}
+            ]
+        }
+
+        result = download_blob("missing-container", "file.txt")
+        result_data = json.loads(result)
+
+        self.assertIn("error", result_data)
+        self.assertIn("not found in configuration", result_data["error"])
+
+    @patch('server.create_blob_service_client')
+    @patch('server.get_storage_config')
+    def test_download_blob_blob_not_found(self, mock_get_config, mock_create_client):
+        """Test download_blob when the blob does not exist."""
+        mock_get_config.return_value = {
+            "containers": [
+                {"container_name": "test-container", "account_name": "a", "account_key": "k"}
+            ]
+        }
+
+        mock_blob_service = MagicMock()
+        mock_container_client = MagicMock()
+        mock_blob_client = MagicMock()
+        mock_container_client.exists.return_value = True
+        mock_blob_client.exists.return_value = False
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service.get_container_client.return_value = mock_container_client
+        mock_create_client.return_value = mock_blob_service
+
+        result = download_blob("test-container", "nonexistent.txt")
+        result_data = json.loads(result)
+
+        self.assertIn("error", result_data)
+        self.assertIn("does not exist", result_data["error"])
+
+    @patch('server.get_storage_config')
+    def test_download_blob_missing_credentials(self, mock_get_config):
+        """Test download_blob when credentials cannot be resolved."""
+        mock_get_config.return_value = {
+            "containers": [
+                {"container_name": "test-container"}
+            ]
+        }
+
+        result = download_blob("test-container", "file.txt")
+        result_data = json.loads(result)
+
+        self.assertIn("error", result_data)
+        self.assertIn("account_name and account_key are required", result_data["error"])
+
+    @patch('server.generate_blob_sas', return_value='sas')
+    @patch('server.create_blob_service_client')
+    @patch('server.get_storage_config')
+    def test_download_blob_expiry_clamped(self, mock_get_config, mock_create_client, mock_gen_sas):
+        """Test that expiry_minutes is clamped to valid range."""
+        mock_get_config.return_value = {
+            "containers": [
+                {"container_name": "c", "account_name": "a", "account_key": "k"}
+            ]
+        }
+
+        mock_blob_service = MagicMock()
+        mock_container_client = MagicMock()
+        mock_blob_client = MagicMock()
+        mock_container_client.exists.return_value = True
+        mock_blob_client.exists.return_value = True
+        mock_blob_props = MagicMock()
+        mock_blob_props.size = 0
+        mock_blob_props.content_settings.content_type = None
+        mock_blob_props.last_modified = None
+        mock_blob_client.get_blob_properties.return_value = mock_blob_props
+        mock_container_client.get_blob_client.return_value = mock_blob_client
+        mock_blob_service.get_container_client.return_value = mock_container_client
+        mock_create_client.return_value = mock_blob_service
+
+        # Test with value exceeding max
+        result = download_blob("c", "file.txt", 9999)
+        result_data = json.loads(result)
+        self.assertEqual(result_data["expiry_minutes"], 60)
+
+        # Test with value below min
+        result = download_blob("c", "file.txt", -5)
+        result_data = json.loads(result)
+        self.assertEqual(result_data["expiry_minutes"], 1)
 
 
 if __name__ == "__main__":
