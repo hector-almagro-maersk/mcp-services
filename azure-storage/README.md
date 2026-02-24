@@ -8,6 +8,7 @@ An MCP (Model Context Protocol) server for monitoring Azure Blob Storage contain
 - **Flexible Authentication**: Support for both connection strings and account key authentication
 - **Detailed Reporting**: Get comprehensive information about containers and their contents
 - **Blob Listing**: List blobs in specific containers with optional filtering
+- **Blob Download**: Generate temporary SAS-based download URLs for individual blobs
 - **Secure Configuration**: Secrets are not logged or exposed in responses
 
 ## Installation
@@ -122,6 +123,24 @@ Lists blobs in a specific container.
 - `max_results`: Maximum number of blobs to return (default: 10, max: 100)
 - `prefix`: Optional prefix to filter blobs by name
 
+### `download_blob(container_name, blob_name, expiry_minutes=5)`
+Generates a temporary, read-only SAS download URL for a specific blob.
+
+Azure Blob URLs **without a SAS token are not downloadable** by external clients — Azure requires OAuth, an account key, or a SAS for every request. This tool uses the server-side credentials to generate a short-lived, single-blob, read-only SAS URL that the client can open directly in a browser to download the file. The client never needs (or receives) any storage credentials.
+
+**Parameters:**
+- `container_name`: The name of the container where the blob is stored
+- `blob_name`: The full name (path) of the blob to download
+- `expiry_minutes`: Number of minutes the download link remains valid (default: 5, max: 60)
+
+**Returns:** JSON with `download_url`, expiry info, file size, content type and last modified date.
+
+**Security:**
+- SAS is scoped to a single blob with read-only permission
+- Link expires automatically after the configured time (default 5 minutes)
+- `Content-Disposition: attachment` header forces a file download in browsers
+- Blob names with special characters are URL-encoded automatically
+
 ### `show_version`
 Shows the current server version and changelog.
 
@@ -144,14 +163,22 @@ list_blobs("my-container", 20)
 
 # List blobs with a specific prefix
 list_blobs("my-container", 10, "logs/")
+
+# Generate a download URL for a blob (valid for 5 minutes, the default)
+download_blob("my-container", "reports/monthly.csv")
+
+# Generate a download URL valid for 30 minutes
+download_blob("my-container", "reports/monthly.csv", 30)
 ```
 
 ## Security Considerations
 
-- Account keys and connection strings are sensitive credentials
-- The server does not log or expose these secrets in responses
-- Use environment variables for production deployments
-- Consider using Azure Managed Identity for enhanced security in Azure environments
+- **Blob URLs without SAS are not downloadable.** Azure Blob Storage requires OAuth, an account key, or a SAS token for every request. Raw blob URLs are internal identifiers, not downloadable resources.
+- The `download_blob` tool generates a **short-lived, read-only SAS URL** on-demand so the client can download directly from Azure without needing any storage credentials.
+- Account keys and connection strings are sensitive credentials that stay server-side.
+- The server does not log or expose secrets in responses.
+- Use environment variables for production deployments.
+- Consider using Azure Managed Identity for enhanced security in Azure environments.
 
 ## Error Handling
 
@@ -180,6 +207,6 @@ The server is designed to be easily extensible. You can add new tools for:
 
 ## Version
 
-Current version: 1.0.0
+Current version: 1.2.0
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and changes.

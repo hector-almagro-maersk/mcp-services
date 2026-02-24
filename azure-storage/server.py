@@ -1,9 +1,11 @@
 import os
 import re
 import json
+from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any, Optional
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions, ContentSettings
 from azure.core.exceptions import AzureError
 
 
@@ -334,6 +336,125 @@ def list_blobs(container_name: str, max_results: int = 10, prefix: str = None) -
         return json.dumps({"error": f"Azure error listing blobs in '{container_name}': {str(e)}"})
     except Exception as e:
         return json.dumps({"error": f"Error listing blobs in '{container_name}': {str(e)}"})
+
+
+@mcp.tool(description="Generate a temporary, read-only SAS download URL for a blob. The MCP never exposes raw blob URLs (which are not downloadable without credentials); instead it generates a short-lived signed URL on-demand so the client can download directly from Azure without needing any secrets.")
+def download_blob(container_name: str, blob_name: str, expiry_minutes: int = 5) -> str:
+    """
+    Generate a temporary download URL (SAS token) for a specific blob.
+
+    Azure Blob URLs without a SAS token are not downloadable by external clients.
+    This tool uses the server-side credentials (account key or connection string)
+    to generate a short-lived, read-only SAS URL that the client can open
+    directly in a browser to download the file.
+
+    Security model:
+      - The client never receives storage credentials.
+      - The SAS is scoped to a single blob with read-only permission.
+      - The link expires automatically after the configured time.
+
+    Args:
+        container_name: The name of the container where the blob is stored.
+        blob_name: The full name (path) of the blob to download.
+        expiry_minutes: Number of minutes the download link remains valid (default: 5, max: 60).
+
+    Returns:
+        JSON string containing the download URL and metadata.
+    """
+    try:
+        # Clamp expiry between 1 and 60 minutes (1 hour max)
+        expiry_minutes = max(1, min(expiry_minutes, 60))
+
+        config = get_storage_config()
+        containers = config.get("containers", [])
+
+        # Find the container configuration
+        container_config = None
+        for config_item in containers:
+            if config_item.get("container_name") == container_name:
+                container_config = config_item
+                break
+
+        if not container_config:
+            return json.dumps({
+                "error": f"Container '{container_name}' not found in configuration",
+                "available_containers": [c.get("container_name") for c in containers]
+            })
+
+        # We need account_name and account_key to generate a SAS token
+        account_name = container_config.get("account_name")
+        account_key = container_config.get("account_key")
+
+        if not account_name or not account_key:
+            # Try to extract from connection string
+            conn_str = container_config.get("connection_string", "")
+            for part in conn_str.split(";"):
+                if part.startswith("AccountName="):
+                    account_name = part.split("=", 1)[1]
+                elif part.startswith("AccountKey="):
+                    account_key = part.split("=", 1)[1]
+
+        if not account_name or not account_key:
+            return json.dumps({
+                "error": "Cannot generate download URL: account_name and account_key are required (either directly or from connection_string)"
+            })
+
+        # Verify the blob exists
+        blob_service_client = create_blob_service_client(container_config)
+        container_client = blob_service_client.get_container_client(container_name)
+
+        if not container_client.exists():
+            return json.dumps({
+                "error": f"Container '{container_name}' does not exist",
+                "container_name": container_name
+            })
+
+        blob_client = container_client.get_blob_client(blob_name)
+        if not blob_client.exists():
+            return json.dumps({
+                "error": f"Blob '{blob_name}' does not exist in container '{container_name}'",
+                "container_name": container_name,
+                "blob_name": blob_name
+            })
+
+        # Get blob properties for metadata
+        blob_properties = blob_client.get_blob_properties()
+
+        # Derive file name for Content-Disposition header
+        file_name = blob_name.rsplit("/", 1)[-1] if "/" in blob_name else blob_name
+
+        # Generate SAS token with read-only permission and Content-Disposition attachment
+        expiry_time = datetime.now(timezone.utc) + timedelta(minutes=expiry_minutes)
+        sas_token = generate_blob_sas(
+            account_name=account_name,
+            container_name=container_name,
+            blob_name=blob_name,
+            account_key=account_key,
+            permission=BlobSasPermissions(read=True),
+            expiry=expiry_time,
+            content_disposition=f'attachment; filename="{file_name}"'
+        )
+
+        # URL-encode the blob name to handle paths with special characters
+        encoded_blob_name = quote(blob_name, safe="/")
+        download_url = f"https://{account_name}.blob.core.windows.net/{container_name}/{encoded_blob_name}?{sas_token}"
+
+        result = {
+            "container_name": container_name,
+            "blob_name": blob_name,
+            "download_url": download_url,
+            "expires_at": expiry_time.isoformat(),
+            "expiry_minutes": expiry_minutes,
+            "size": blob_properties.size,
+            "content_type": blob_properties.content_settings.content_type if blob_properties.content_settings else None,
+            "last_modified": blob_properties.last_modified.isoformat() if blob_properties.last_modified else None
+        }
+
+        return json.dumps(result, indent=2)
+    except AzureError as e:
+        return json.dumps({"error": f"Azure error generating download URL: {str(e)}"})
+    except Exception as e:
+        return json.dumps({"error": f"Error generating download URL: {str(e)}"})
 
 
 if __name__ == "__main__":

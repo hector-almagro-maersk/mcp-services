@@ -204,6 +204,118 @@ class TestServerIntegration(unittest.TestCase):
 class TestGetPodAppsettingsFile(unittest.TestCase):
     """Tests for the get_pod_appsettings_file tool."""
 
+    @patch('server.client.AppsV1Api')
+    @patch('server.initialize_kubernetes_client')
+    def test_restart_pod_rollout_success(self, mock_init_client, mock_apps_v1_cls):
+        """Test successful rollout restart of a pod."""
+        from server import restart_pod
+
+        mock_v1 = MagicMock()
+        mock_init_client.return_value = mock_v1
+
+        mock_apps_v1 = MagicMock()
+        mock_apps_v1_cls.return_value = mock_apps_v1
+
+        # Mock pod with owner reference to a ReplicaSet
+        mock_pod = MagicMock()
+        mock_pod.metadata.name = "my-app-abc123"
+        mock_owner_ref = MagicMock()
+        mock_owner_ref.kind = "ReplicaSet"
+        mock_owner_ref.name = "my-app-rs"
+        mock_pod.metadata.owner_references = [mock_owner_ref]
+        mock_v1.read_namespaced_pod.return_value = mock_pod
+
+        # Mock ReplicaSet with owner reference to a Deployment
+        mock_rs = MagicMock()
+        mock_rs_owner = MagicMock()
+        mock_rs_owner.kind = "Deployment"
+        mock_rs_owner.name = "my-app"
+        mock_rs.metadata.owner_references = [mock_rs_owner]
+        mock_apps_v1.read_namespaced_replica_set.return_value = mock_rs
+
+        # Mock successful patch
+        mock_apps_v1.patch_namespaced_deployment.return_value = MagicMock()
+
+        result = restart_pod("my-app-abc123", namespace="default")
+        parsed = json.loads(result)
+
+        self.assertEqual(parsed["status"], "success")
+        self.assertEqual(parsed["deployment"], "my-app")
+        self.assertIn("Rollout restart triggered", parsed["message"])
+        mock_apps_v1.patch_namespaced_deployment.assert_called_once()
+        # Verify the annotation patch was used
+        call_kwargs = mock_apps_v1.patch_namespaced_deployment.call_args
+        body = call_kwargs[1].get("body") or call_kwargs[0][2] if len(call_kwargs[0]) > 2 else call_kwargs[1]["body"]
+        self.assertIn("kubectl.kubernetes.io/restartedAt", body["spec"]["template"]["metadata"]["annotations"])
+
+    @patch('server.client.AppsV1Api')
+    @patch('server.initialize_kubernetes_client')
+    def test_restart_pod_not_found(self, mock_init_client, mock_apps_v1_cls):
+        """Test restart_pod when the pod does not exist."""
+        from server import restart_pod
+        from kubernetes.client.rest import ApiException
+
+        mock_v1 = MagicMock()
+        mock_init_client.return_value = mock_v1
+        mock_apps_v1_cls.return_value = MagicMock()
+
+        mock_v1.read_namespaced_pod.side_effect = ApiException(status=404, reason="Not Found")
+        mock_v1.list_namespaced_pod.return_value = MagicMock(items=[])
+
+        result = restart_pod("nonexistent-pod", namespace="default")
+        parsed = json.loads(result)
+
+        self.assertEqual(parsed["status"], "error")
+        self.assertIn("not found", parsed["message"].lower())
+
+    @patch('server.client.AppsV1Api')
+    @patch('server.initialize_kubernetes_client')
+    def test_restart_pod_no_deployment(self, mock_init_client, mock_apps_v1_cls):
+        """Test restart_pod when the pod is not managed by a deployment."""
+        from server import restart_pod
+
+        mock_v1 = MagicMock()
+        mock_init_client.return_value = mock_v1
+        mock_apps_v1_cls.return_value = MagicMock()
+
+        mock_pod = MagicMock()
+        mock_pod.metadata.owner_references = None
+        mock_v1.read_namespaced_pod.return_value = mock_pod
+
+        result = restart_pod("standalone-pod", namespace="default")
+        parsed = json.loads(result)
+
+        self.assertEqual(parsed["status"], "error")
+        self.assertIn("Could not find deployment", parsed["message"])
+
+    @patch('server.client.AppsV1Api')
+    @patch('server.initialize_kubernetes_client')
+    def test_restart_pod_patch_failure(self, mock_init_client, mock_apps_v1_cls):
+        """Test restart_pod when the deployment patch fails."""
+        from server import restart_pod
+        from kubernetes.client.rest import ApiException
+
+        mock_v1 = MagicMock()
+        mock_init_client.return_value = mock_v1
+
+        mock_apps_v1 = MagicMock()
+        mock_apps_v1_cls.return_value = mock_apps_v1
+
+        mock_pod = MagicMock()
+        mock_owner_ref = MagicMock()
+        mock_owner_ref.kind = "Deployment"
+        mock_owner_ref.name = "my-deploy"
+        mock_pod.metadata.owner_references = [mock_owner_ref]
+        mock_v1.read_namespaced_pod.return_value = mock_pod
+
+        mock_apps_v1.patch_namespaced_deployment.side_effect = ApiException(status=403, reason="Forbidden")
+
+        result = restart_pod("my-pod", namespace="default")
+        parsed = json.loads(result)
+
+        self.assertEqual(parsed["status"], "error")
+        self.assertIn("Failed to restart deployment", parsed["message"])
+
     @patch('server.stream')
     @patch('server.initialize_kubernetes_client')
     def test_get_pod_appsettings_file_success(self, mock_init_client, mock_stream):

@@ -598,34 +598,34 @@ def azure_status() -> str:
         }, indent=2)
 
 
-@mcp.tool(description="Restart a pod by scaling its deployment to 0 and then back to 1 replica automatically.")
+@mcp.tool(description="Restart a pod by triggering a rollout restart of its deployment.")
 def restart_pod(pod_name: str, namespace: Optional[str] = None) -> str:
     """
-    Restart a pod by scaling its deployment to 0 replicas and then back to 1.
-    This is useful for restarting pods that are stuck or need a fresh start.
+    Restart a pod by triggering a rollout restart of its deployment.
+    This performs a rolling restart by patching the deployment's restartedAt annotation,
+    which ensures zero-downtime restarts if replicas > 1.
     
     Args:
         pod_name: Name of the pod to restart
         namespace: Optional namespace where the pod is located. If not provided, uses the configured default namespace.
     
     Returns:
-        JSON string containing the restart operation status and steps.
+        JSON string containing the restart operation status.
     """
     try:
         import json
-        import time
+        import datetime
         
         # Initialize both v1 and apps_v1 clients
         v1 = initialize_kubernetes_client()
         apps_v1 = client.AppsV1Api()
         target_namespace = namespace or get_namespace()
         
+        steps = []
+        
         # First, try to get the pod to find its deployment/replicaset
         pod = None
         deployment_name = None
-        # Capture ordered steps for tracing the restart process. Initialize early so
-        # any early-return paths can append messages safely.
-        steps = []
 
         try:
             pod = v1.read_namespaced_pod(name=pod_name, namespace=target_namespace)
@@ -674,111 +674,40 @@ def restart_pod(pod_name: str, namespace: Optional[str] = None) -> str:
                 "message": f"Could not find deployment for pod '{pod_name}'. Pod may not be managed by a deployment."
             })
         
-        steps = []
-        
-        # Step 1: Scale deployment to 0
+        # Perform rollout restart by patching the restartedAt annotation
         try:
-            deployment = apps_v1.read_namespaced_deployment(
-                name=deployment_name, namespace=target_namespace
-            )
-            original_replicas = deployment.spec.replicas
-            
-            # Use scale subresource for more reliable scaling
-            scale_body = {
-                "spec": {
-                    "replicas": 0
+            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            body = {
+                'spec': {
+                    'template': {
+                        'metadata': {
+                            'annotations': {
+                                'kubectl.kubernetes.io/restartedAt': now
+                            }
+                        }
+                    }
                 }
             }
-            apps_v1.patch_namespaced_deployment_scale(
-                name=deployment_name, 
-                namespace=target_namespace, 
-                body=scale_body
+            apps_v1.patch_namespaced_deployment(
+                name=deployment_name,
+                namespace=target_namespace,
+                body=body
             )
-            steps.append(f"Scaled deployment '{deployment_name}' to 0 replicas")
-            
-            # Wait for pod to be terminated (with timeout)
-            max_wait = 60  # 60 seconds timeout
-            wait_time = 0
-            while wait_time < max_wait:
-                try:
-                    v1.read_namespaced_pod(name=pod_name, namespace=target_namespace)
-                    time.sleep(2)
-                    wait_time += 2
-                except ApiException as e:
-                    if e.status == 404:
-                        steps.append(f"Pod '{pod_name}' successfully terminated")
-                        break
-                    else:
-                        raise
-            
-            if wait_time >= max_wait:
-                steps.append(f"Warning: Pod '{pod_name}' still exists after {max_wait} seconds")
-            
-            # Step 2: Scale deployment back to original replicas (or 1 if original was 0)
-            target_replicas = max(original_replicas or 1, 1)
-            scale_body = {
-                "spec": {
-                    "replicas": target_replicas
-                }
-            }
-            apps_v1.patch_namespaced_deployment_scale(
-                name=deployment_name, 
-                namespace=target_namespace, 
-                body=scale_body
-            )
-            steps.append(f"Scaled deployment '{deployment_name}' back to {target_replicas} replica(s)")
-            
-            # Wait a bit for new pod to start
-            time.sleep(5)
-            
-            # Get the new pod status
-            pods = v1.list_namespaced_pod(
-                namespace=target_namespace, 
-                label_selector=f"app={deployment_name}"
-            )
-            
-            new_pods = []
-            for p in pods.items:
-                new_pods.append({
-                    "name": p.metadata.name,
-                    "phase": p.status.phase,
-                    "ready": all(container.ready for container in (p.status.container_statuses or [])),
-                    "created": p.metadata.creation_timestamp.isoformat() if p.metadata.creation_timestamp else None
-                })
+            steps.append(f"Triggered rollout restart for deployment '{deployment_name}'")
             
             return json.dumps({
                 "status": "success",
-                "message": f"Pod restart completed successfully",
+                "message": "Rollout restart triggered successfully",
                 "deployment": deployment_name,
                 "namespace": target_namespace,
                 "steps": steps,
-                "new_pods": new_pods,
-                "original_replicas": original_replicas,
-                "target_replicas": target_replicas,
                 "original_pod": pod_name
             }, indent=2)
             
         except ApiException as e:
-            # If scaling back fails, try to restore original replicas
-            if len(steps) > 0 and "scaled" in steps[-1].lower():
-                try:
-                    scale_body = {
-                        "spec": {
-                            "replicas": original_replicas or 1
-                        }
-                    }
-                    apps_v1.patch_namespaced_deployment_scale(
-                        name=deployment_name, 
-                        namespace=target_namespace, 
-                        body=scale_body
-                    )
-                    steps.append(f"Attempted to restore deployment '{deployment_name}' to {original_replicas or 1} replica(s)")
-                except:
-                    steps.append(f"Failed to restore deployment '{deployment_name}' after error")
-            
             return json.dumps({
                 "status": "error",
-                "message": f"Failed to restart pod: {e.status} - {e.reason}",
+                "message": f"Failed to restart deployment: {e.status} - {e.reason}",
                 "steps": steps,
                 "deployment": deployment_name,
                 "namespace": target_namespace

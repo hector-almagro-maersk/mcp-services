@@ -2,6 +2,14 @@
 
 All notable changes to the Kubernetes MCP Server will be documented in this file.
 
+## [1.3.0] - 2026-02-12
+
+### Changed
+- **restart_pod**: Updated to use `kubectl rollout restart` strategy (patching `kubectl.kubernetes.io/restartedAt` annotation) instead of scaling replicas to 0 and back. This ensures zero-downtime restarts if replicas > 1 and is the standard Kubernetes approach for rolling restarts.
+
+### Removed
+- Removed the scale-to-zero restart strategy from `restart_pod` in favor of the annotation-based rollout restart.
+
 ## [1.2.0] - 2026-02-10
 
 ### Added
@@ -58,7 +66,7 @@ All notable changes to the Kubernetes MCP Server will be documented in this file
 - **get_cluster_health**: Overall cluster health monitoring
 - **azure_login**: Authenticate with Azure AD for AKS access
 - **azure_status**: Check Azure authentication status
-- **restart_pod**: Restart pods by scaling deployment to 0 and back to 1 replica
+- **restart_pod**: Restart pods by triggering a rollout restart of the owning deployment
 - **show_version**: Display version and configuration information
 
 ### Configuration

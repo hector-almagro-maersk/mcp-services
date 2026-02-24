@@ -142,7 +142,7 @@ Check current Azure authentication status and subscription information.
 - Current Kubernetes context and namespace
 
 #### 11. `restart_pod`
-Restart a pod by automatically scaling its deployment to 0 and then back to 1 replica.
+Restart a pod by triggering a rollout restart of its deployment. This patches the `kubectl.kubernetes.io/restartedAt` annotation on the deployment's pod template, causing Kubernetes to perform a rolling restart. This ensures zero-downtime restarts when replicas > 1.
 
 **Parameters:**
 - `pod_name`: Name of the pod to restart
@@ -150,10 +150,9 @@ Restart a pod by automatically scaling its deployment to 0 and then back to 1 re
 
 **Returns:**
 - Restart operation status
-- Deployment name and scaling steps
-- New pod information after restart
+- Deployment name and rollout steps
 
-**Note:** This tool only works with pods managed by deployments. It will automatically find the deployment that owns the pod and perform a rolling restart.
+**Note:** This tool only works with pods managed by deployments. It will automatically find the deployment that owns the pod and trigger a rollout restart.
 
 #### 12. `get_pod_appsettings_file`
 Read the content of the `appsettings.Production.json` configuration file from a running pod.
