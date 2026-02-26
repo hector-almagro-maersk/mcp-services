@@ -52,6 +52,14 @@ Python-based MCP server providing a complete bridge to the CardTrader Full API v
 - **Implementation**: Python using CardTrader Full API v2 via `requests`
 - **Documentation**: [cardtrader/README.md](cardtrader/README.md)
 
+### 🏰 Lorcast (`lorcast/`)
+Python-based MCP server for accessing Disney Lorcana Trading Card Game data via the Lorcast public API.
+
+- **Features**: Set browsing, full-text card search with Lorcast syntax, card detail retrieval, card image URLs, pricing data, ink/rarity filters, built-in rate limiting
+- **Tools**: `list_sets`, `get_set`, `get_set_cards`, `search_cards`, `get_card`, `get_card_image_uris`, `get_card_prices`, `get_cards_by_ink`, `get_cards_by_rarity`, `show_version`
+- **Implementation**: Python using Lorcast REST API via `requests` (no auth required)
+- **Documentation**: [lorcast/README.md](lorcast/README.md)
+
 ## 🚀 Quick Start
 
 ### Download Pre-built Artifacts
@@ -104,6 +112,13 @@ python -m py_compile server.py
 
 # Or set up Python environment for cardtrader
 cd ../cardtrader
+pip install -r requirements.txt
+
+# Validate the server
+python -m py_compile server.py
+
+# Or set up Python environment for lorcast
+cd ../lorcast
 pip install -r requirements.txt
 
 # Validate the server
@@ -177,6 +192,13 @@ mcp-services/
 │   ├── VERSION
 │   ├── test_server.py
 │   └── config.json
+├── lorcast/                 # Python MCP Server for Disney Lorcana (Lorcast API)
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── CHANGELOG.md
+│   ├── VERSION
+│   └── test_server.py
 └── [other-services]/       # Future MCP services
 ```
 

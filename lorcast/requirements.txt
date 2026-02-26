@@ -1,0 +1,3 @@
+# Python dependencies for lorcast
+requests
+mcp
