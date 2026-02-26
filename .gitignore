@@ -29,6 +29,9 @@ coverage/
 config.json
 */config.json
 
+# Python bytecode cache
+__pycache__/
+
 # OS generated files
 .DS_Store
 .DS_Store?

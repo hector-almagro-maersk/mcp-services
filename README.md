@@ -44,6 +44,14 @@ Python-based MCP server for comprehensive read-only access to Spotify music meta
 - **Implementation**: Python using Spotify Web API via `requests`
 - **Documentation**: [spotify-tools/README.md](spotify-tools/README.md)
 
+### 🃏 CardTrader (`cardtrader/`)
+Python-based MCP server providing a complete bridge to the CardTrader Full API v2. Every public API endpoint is exposed as an individual MCP tool.
+
+- **Features**: Full API coverage (37 tools), marketplace browsing, cart & purchasing, wishlist management, inventory/selling, batch operations, order management, CardTrader Zero box
+- **Tools**: `list_games`, `list_expansions`, `list_blueprints`, `list_marketplace_products`, `add_to_cart`, `purchase_cart`, `create_wishlist`, `create_product`, `batch_create_products`, `list_orders`, `ship_order`, `show_version` (and 25 more)
+- **Implementation**: Python using CardTrader Full API v2 via `requests`
+- **Documentation**: [cardtrader/README.md](cardtrader/README.md)
+
 ## 🚀 Quick Start
 
 ### Download Pre-built Artifacts
@@ -89,6 +97,13 @@ python -m py_compile server.py
 
 # Or set up Python environment for spotify-tools
 cd ../spotify-tools
+pip install -r requirements.txt
+
+# Validate the server
+python -m py_compile server.py
+
+# Or set up Python environment for cardtrader
+cd ../cardtrader
 pip install -r requirements.txt
 
 # Validate the server
@@ -154,6 +169,14 @@ mcp-services/
 │   ├── server.py
 │   ├── CHANGELOG.md
 │   └── VERSION
+├── cardtrader/              # Python MCP Server for CardTrader Full API v2
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── server.py
+│   ├── CHANGELOG.md
+│   ├── VERSION
+│   ├── test_server.py
+│   └── config.json
 └── [other-services]/       # Future MCP services
 ```
 
