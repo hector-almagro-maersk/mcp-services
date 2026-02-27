@@ -10,7 +10,6 @@ A Model Context Protocol (MCP) server that provides tools for monitoring and int
 - **Detailed Inspection**: Get comprehensive information about specific pods
 - **Log Retrieval**: Fetch pod logs for troubleshooting
 - **Namespace Management**: List and explore available namespaces
-- **Cluster Health**: Get overall cluster health summary
 - **Azure Authentication**: Built-in Azure AD login and status checking for AKS clusters
 - **File Inspection**: Read configuration files (e.g., `appsettings.Production.json`) from running pods
 - **Flexible Configuration**: Support for different kubeconfig files, namespaces, and contexts
@@ -118,13 +117,10 @@ Retrieves logs from a specific pod.
 #### 6. `list_namespaces`
 Lists all namespaces in the cluster.
 
-#### 7. `get_cluster_health`
-Provides a summary of cluster health including pod states across all namespaces.
-
-#### 8. `show_version`
+#### 7. `show_version`
 Shows the current version and configuration information.
 
-#### 9. `azure_login`
+#### 8. `azure_login`
 Authenticate with Azure AD for AKS cluster access. Helps resolve 403 Forbidden errors.
 
 **Returns:**
@@ -132,7 +128,7 @@ Authenticate with Azure AD for AKS cluster access. Helps resolve 403 Forbidden e
 - Next steps for accessing clusters
 - Error handling for common issues
 
-#### 10. `azure_status`
+#### 9. `azure_status`
 Check current Azure authentication status and subscription information.
 
 **Returns:**
@@ -141,7 +137,7 @@ Check current Azure authentication status and subscription information.
 - Available subscriptions
 - Current Kubernetes context and namespace
 
-#### 11. `restart_pod`
+#### 10. `restart_pod`
 Restart a pod by triggering a rollout restart of its deployment. This patches the `kubectl.kubernetes.io/restartedAt` annotation on the deployment's pod template, causing Kubernetes to perform a rolling restart. This ensures zero-downtime restarts when replicas > 1.
 
 **Parameters:**
@@ -154,7 +150,7 @@ Restart a pod by triggering a rollout restart of its deployment. This patches th
 
 **Note:** This tool only works with pods managed by deployments. It will automatically find the deployment that owns the pod and trigger a rollout restart.
 
-#### 12. `get_pod_appsettings_file`
+#### 11. `get_pod_appsettings_file`
 Read the content of the `appsettings.Production.json` configuration file from a running pod.
 
 Uses the Kubernetes exec API to run `cat` inside the container and retrieve the file content. The tool automatically searches the following common .NET application paths:
